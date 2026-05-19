@@ -1,6 +1,6 @@
 {
-  "name": "ФИНКИ Хаб",
-  "short_name": "ФИНКИ Хаб",
+  "name": "ФИНКИ Хаб / Распореди",
+  "short_name": "Распореди",
   "icons": [
     {
       "src": "/web-app-manifest-192x192.png",
