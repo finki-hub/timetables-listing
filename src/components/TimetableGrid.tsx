@@ -28,6 +28,7 @@ const GridSkeleton = () => (
       {Array.from({ length: 12 }).map((_, index) => (
         <Skeleton
           className="h-24"
+          // eslint-disable-next-line @eslint-react/no-array-index-key -- Skeleton placeholders are static and never reorder
           key={index}
         />
       ))}

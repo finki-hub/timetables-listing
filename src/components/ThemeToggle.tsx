@@ -21,7 +21,7 @@ const getInitialTheme = (): Theme => {
 };
 
 const applyTheme = (theme: Theme) => {
-  document.documentElement.dataset.kbTheme = theme;
+  document.documentElement.dataset['kbTheme'] = theme;
   localStorage.setItem(storageKey, theme);
 };
 
