@@ -1,28 +1,26 @@
-# finki-hub-timetables-listing
+# FINKI Hub / Timetables Listing
 
-React SPA for browsing current and historical FINKI EduPage timetables by class group, teacher, or classroom.
+A timetable browser for current and historical FCSE class schedules.
 
-## Data
+## Features
 
-The MVP uses static EduPage JSON files in `public/timetables/` to avoid EduPage CORS restrictions. `public/timetables/index.json` is the manifest used by the app to discover available versions.
-
-Historical versions are intentionally shown even when the source EduPage listing marks them as `hidden`; for this app, hidden means “archived by EduPage,” not “hide from users.”
+- **Historical timetables** — browse past and present semester schedules
+- **Multiple views** — filter by class group, teacher, or classroom
+- **Static data** — pre-fetched EduPage data avoids CORS issues
 
 ## Development
 
-```bash
+```sh
 npm install
 npm run dev
 ```
 
-## Verification
+## Build
 
-```bash
-npm run typecheck
-npm test
+```sh
 npm run build
 ```
 
-## Deployment
+## License
 
-The app builds to `dist/` and can be deployed as a static Cloudflare Pages site. It currently assumes root deployment because timetable assets are fetched from `/timetables/...`.
+This project is licensed under the terms of the MIT license.
