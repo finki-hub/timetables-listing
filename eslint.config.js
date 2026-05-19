@@ -3,28 +3,18 @@ import {
   browser,
   perfectionist,
   prettier,
+  react,
   typescript,
 } from 'eslint-config-imperium';
 
 const config = [
-  { ignores: ['dist', 'public/timetables', '.playwright-mcp'] },
+  { ignores: ['dist'] },
   ...base,
   browser,
+  react,
   typescript,
   prettier,
   perfectionist,
-  {
-    files: ['src/**/*.test.ts'],
-    languageOptions: {
-      globals: {
-        process: 'readonly',
-      },
-    },
-    rules: {
-      'max-nested-callbacks': 'off',
-      'security/detect-non-literal-fs-filename': 'off',
-    },
-  },
 ];
 
 export default config;
