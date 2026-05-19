@@ -7,8 +7,7 @@
     "exactOptionalPropertyTypes": false,
     "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
-    "jsx": "preserve",
-    "jsxImportSource": "react",
+    "jsx": "react-jsx",
     "lib": [
       "DOM",
       "DOM.Iterable",
