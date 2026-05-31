@@ -1,13 +1,9 @@
+import { CalendarXIcon } from 'lucide-react';
+
 import type { EduPagePeriod, ResolvedCard } from '@/lib/types';
 
 import { CardBlock } from '@/components/CardBlock';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { dayNames } from '@/lib/resolve-cards';
 
@@ -23,17 +19,40 @@ type TimetableGridProps = {
 };
 
 const GridSkeleton = () => (
-  <Card>
-    <CardContent className="grid grid-cols-1 gap-3 pt-5 md:grid-cols-3">
-      {Array.from({ length: 12 }).map((_, index) => (
-        <Skeleton
-          className="h-24"
-          // eslint-disable-next-line @eslint-react/no-array-index-key -- Skeleton placeholders are static and never reorder
-          key={index}
-        />
+  <div className="grid gap-4">
+    <div className="hidden rounded-xl border bg-card p-3 shadow-sm lg:block">
+      <div className="grid min-w-[980px] grid-cols-[7rem_repeat(5,minmax(10rem,1fr))] gap-2">
+        <Skeleton className="h-10" />
+        {dayNames.map((day) => (
+          <Skeleton
+            className="h-10"
+            key={day}
+          />
+        ))}
+        {Array.from({ length: 12 }, (_, index) => `cell-${String(index)}`).map(
+          (cellKey) => (
+            <Skeleton
+              className="col-span-6 h-24"
+              key={cellKey}
+            />
+          ),
+        )}
+      </div>
+    </div>
+    <div className="grid gap-3 lg:hidden">
+      {dayNames.slice(0, 3).map((day) => (
+        <Card key={day}>
+          <CardHeader className="p-4">
+            <Skeleton className="h-5 w-24" />
+          </CardHeader>
+          <CardContent className="flex flex-col gap-2 p-4 pt-0">
+            <Skeleton className="h-20" />
+            <Skeleton className="h-20" />
+          </CardContent>
+        </Card>
       ))}
-    </CardContent>
-  </Card>
+    </div>
+  </div>
 );
 
 const PeriodRow = ({ cards, period }: PeriodRowProps) => {
@@ -41,8 +60,8 @@ const PeriodRow = ({ cards, period }: PeriodRowProps) => {
 
   return (
     <>
-      <div className="flex min-h-24 flex-col justify-center rounded-lg border bg-background px-3 text-sm">
-        <span className="font-bold">{period.name}</span>
+      <div className="flex min-h-28 flex-col justify-center gap-1 rounded-lg border bg-muted/30 px-3 py-2 text-sm">
+        <span className="font-semibold text-foreground">{period.name}</span>
         <span className="text-xs text-muted-foreground">
           {period.starttime}–{period.endtime}
         </span>
@@ -74,7 +93,7 @@ const PeriodRow = ({ cards, period }: PeriodRowProps) => {
           }
 
           return occupiedByPrevious ? (
-            <div className="flex h-full items-center justify-center rounded-md bg-muted/50 text-xs font-medium text-muted-foreground">
+            <div className="flex h-full min-h-28 items-center justify-center rounded-lg border border-dashed bg-muted/20 text-xs italic text-muted-foreground/60">
               продолжува
             </div>
           ) : null;
@@ -82,7 +101,7 @@ const PeriodRow = ({ cards, period }: PeriodRowProps) => {
 
         return (
           <div
-            className="min-h-24 rounded-lg border border-dashed bg-background p-1.5"
+            className="min-h-28 rounded-lg border bg-card/50 p-1.5 transition-colors hover:bg-card"
             key={`${day}-${period.id}`}
           >
             {cellContent}
@@ -100,14 +119,18 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
 
   if (cards.length === 0) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Нема записи во распоредот</CardTitle>
-          <CardDescription>
-            Избраниот запис нема закажани термини во оваа верзија.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed bg-card py-16 text-center shadow-sm">
+        <CalendarXIcon
+          aria-hidden="true"
+          className="mb-4 h-10 w-10 text-muted-foreground/40"
+        />
+        <h3 className="text-lg font-semibold text-foreground">
+          Нема записи во распоредот
+        </h3>
+        <p className="mt-1 max-w-sm text-sm text-muted-foreground">
+          Избраниот запис нема закажани термини во оваа верзија.
+        </p>
+      </div>
     );
   }
 
@@ -118,39 +141,49 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
           const dayCards = cards.filter((card) => card.dayIndex === dayIndex);
 
           return (
-            <Card key={day}>
-              <CardHeader className="p-4">
+            <Card
+              className="overflow-hidden"
+              key={day}
+            >
+              <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-4">
                 <CardTitle className="text-base">{day}</CardTitle>
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+                  {dayCards.length}
+                </span>
               </CardHeader>
-              <CardContent className="flex flex-col gap-2 p-4 pt-0">
+              <CardContent className="flex flex-col gap-3 p-4 pt-0">
                 {dayCards.length > 0 ? (
                   dayCards.map((card) => (
                     <div
-                      className="flex flex-col gap-1 rounded-lg border p-3"
+                      className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3"
                       key={card.id}
                     >
-                      <div className="text-xs font-medium text-muted-foreground">
-                        {card.period.starttime}–{card.period.endtime}
+                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                        <span className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm">
+                          {card.period.starttime}–{card.period.endtime}
+                        </span>
                       </div>
                       <CardBlock card={card} />
                     </div>
                   ))
                 ) : (
-                  <p className="text-sm text-muted-foreground">Нема термини.</p>
+                  <p className="py-4 text-center text-sm text-muted-foreground">
+                    Нема термини.
+                  </p>
                 )}
               </CardContent>
             </Card>
           );
         })}
       </div>
-      <div className="hidden overflow-x-auto rounded-lg border bg-card p-2 shadow-sm lg:block">
+      <div className="hidden overflow-x-auto rounded-xl border bg-card p-3 shadow-sm lg:block">
         <div className="grid min-w-[980px] grid-cols-[7rem_repeat(5,minmax(10rem,1fr))] gap-2">
-          <div className="rounded-md bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground">
-            Час
+          <div className="flex items-center rounded-lg bg-primary px-3 py-3 text-sm font-semibold text-primary-foreground">
+            <span>Час</span>
           </div>
           {dayNames.map((day) => (
             <div
-              className="rounded-md bg-primary px-3 py-3 text-center text-sm font-semibold text-primary-foreground"
+              className="flex items-center justify-center rounded-lg bg-primary px-3 py-3 text-center text-sm font-semibold text-primary-foreground"
               key={day}
             >
               {day}
