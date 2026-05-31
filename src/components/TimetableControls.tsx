@@ -1,4 +1,4 @@
-import { SearchIcon } from 'lucide-react';
+import { BookOpenIcon, SearchIcon, UsersIcon } from 'lucide-react';
 
 import type { NamedEntity, TimetableVersion } from '@/lib/types';
 
@@ -33,9 +33,15 @@ const TimetableControls = ({
   selectedVersionId,
   versions,
 }: TimetableControlsProps) => (
-  <div className="grid gap-3 lg:grid-cols-[1.2fr_1fr]">
-    <label className="flex flex-col gap-1.5 text-sm font-semibold">
-      Верзија
+  <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
+    <label className="flex flex-col gap-1.5">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <BookOpenIcon
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+        />
+        Верзија
+      </span>
       <Select
         onValueChange={onVersionChange}
         value={selectedVersionId ?? undefined}
@@ -58,12 +64,18 @@ const TimetableControls = ({
       </Select>
     </label>
 
-    <label className="flex flex-col gap-1.5 text-sm font-semibold">
-      Пребарај
+    <label className="flex flex-col gap-1.5">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <SearchIcon
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+        />
+        Пребарај
+      </span>
       <div className="relative">
         <SearchIcon
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
         />
         <Input
           className="pl-9"
@@ -76,8 +88,14 @@ const TimetableControls = ({
       </div>
     </label>
 
-    <label className="flex flex-col gap-1.5 text-sm font-semibold lg:col-span-2">
-      Избран запис
+    <label className="flex flex-col gap-1.5 lg:col-span-2">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <UsersIcon
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+        />
+        Избран запис
+      </span>
       <Select
         onValueChange={onEntityChange}
         value={selectedEntityId ?? undefined}
