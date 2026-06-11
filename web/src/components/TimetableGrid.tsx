@@ -1,4 +1,4 @@
-import { CalendarXIcon } from 'lucide-react';
+import { CalendarXIcon, TriangleAlertIcon } from 'lucide-react';
 import { useState } from 'react';
 
 import type { Period, TimetableCard } from '@/lib/types';
@@ -27,6 +27,102 @@ type TimetableGridProps = {
 };
 
 const CARD_GAP_REM = 0.5;
+
+type PeriodTimeDisplay = {
+  hasMismatch: boolean;
+  nameLabel: string;
+  timeLabel: string;
+  warning: null | string;
+};
+
+const normalizeTime = (time: string): null | string => {
+  const [hours, minutes, ...rest] = time.trim().split(':');
+
+  if (!hours || !minutes || rest.length > 0) {
+    return null;
+  }
+
+  const numericHours = Number(hours);
+  const numericMinutes = Number(minutes);
+
+  if (
+    !Number.isInteger(numericHours) ||
+    !Number.isInteger(numericMinutes) ||
+    numericHours < 0 ||
+    numericHours > 23 ||
+    numericMinutes < 0 ||
+    numericMinutes > 59
+  ) {
+    return null;
+  }
+
+  return `${String(numericHours).padStart(2, '0')}:${String(numericMinutes).padStart(2, '0')}`;
+};
+
+const periodNameRange = (period: Period): [string, string] | null => {
+  const parts = period.name.split('-').map((part) => part.trim());
+  const start = parts.at(0);
+  const end = parts.at(1);
+
+  if (parts.length !== 2 || !start || !end) {
+    return null;
+  }
+
+  return [start, end];
+};
+
+const periodTimeDisplay = (period: Period): PeriodTimeDisplay => {
+  const nameRange = periodNameRange(period);
+  const nameStartTime = nameRange ? normalizeTime(nameRange[0]) : null;
+  const nameEndTime = nameRange ? normalizeTime(nameRange[1]) : null;
+  const startTime = normalizeTime(period.startTime);
+  const endTime = normalizeTime(period.endTime);
+  const hasMismatch =
+    nameStartTime !== null &&
+    nameEndTime !== null &&
+    startTime !== null &&
+    endTime !== null &&
+    (nameStartTime !== startTime || nameEndTime !== endTime);
+  const timeLabel = `${period.startTime} - ${period.endTime}`;
+
+  return {
+    hasMismatch,
+    nameLabel: period.name,
+    timeLabel,
+    warning: hasMismatch
+      ? `Името на периодот (${period.name}) не се совпаѓа со почетното и крајното време (${timeLabel}).`
+      : null,
+  };
+};
+
+const PeriodTimeContent = ({ display }: { display: PeriodTimeDisplay }) => {
+  if (!display.hasMismatch) {
+    return (
+      <span className="whitespace-nowrap font-semibold text-foreground">
+        {display.timeLabel}
+      </span>
+    );
+  }
+
+  return (
+    <span className="flex flex-col items-center gap-1 text-center">
+      <span className="whitespace-nowrap font-semibold text-foreground">
+        {display.nameLabel}
+      </span>
+      <span
+        aria-hidden="true"
+        className="flex w-full items-center gap-1.5 text-amber-400"
+      >
+        <span className="h-px flex-1 bg-amber-400/40" />
+        <TriangleAlertIcon className="size-3.5 shrink-0" />
+        <span className="h-px flex-1 bg-amber-400/40" />
+      </span>
+      <span className="whitespace-nowrap text-xs font-medium text-muted-foreground">
+        {display.timeLabel}
+      </span>
+    </span>
+  );
+};
 
 const cardEndPeriod = (card: TimetableCard) =>
   card.periodIndex + card.durationPeriods;
@@ -190,6 +286,9 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
   }
 
   const dayLaneLayouts = buildDayLaneLayouts(cards, periods);
+  const periodTimeDisplayByNumber = new Map(
+    periods.map((period) => [period.period, periodTimeDisplay(period)]),
+  );
   const gridTemplateRows = `auto repeat(${String(periods.length)}, minmax(7rem, auto))`;
   const activeDesktopCard = activeDesktopCardId
     ? (cards.find((card) => card.id === activeDesktopCardId) ?? null)
@@ -214,19 +313,42 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
               </CardHeader>
               <CardContent className="flex flex-col gap-3 p-4 pt-3">
                 {dayCards.length > 0 ? (
-                  dayCards.map((card) => (
-                    <div
-                      className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3"
-                      key={card.id}
-                    >
-                      <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                        <span className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm">
-                          {card.startTime} - {card.endTime}
-                        </span>
+                  dayCards.map((card) => {
+                    const display = periodTimeDisplayByNumber.get(
+                      card.periodIndex,
+                    );
+
+                    return (
+                      <div
+                        className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3"
+                        key={card.id}
+                      >
+                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                          {display?.hasMismatch ? (
+                            <span
+                              className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm"
+                              title={display.warning ?? undefined}
+                            >
+                              <TriangleAlertIcon
+                                aria-hidden="true"
+                                className="size-3.5 shrink-0 text-amber-400"
+                              />
+                              <span>{display.timeLabel}</span>
+                              <span className="text-muted-foreground/60">
+                                |
+                              </span>
+                              <span>{display.nameLabel}</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm">
+                              {card.startTime} - {card.endTime}
+                            </span>
+                          )}
+                        </div>
+                        <CardBlock card={card} />
                       </div>
-                      <CardBlock card={card} />
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <p className="py-4 text-center text-sm text-muted-foreground">
                     Нема термини.
@@ -257,17 +379,24 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
               {day}
             </div>
           ))}
-          {periods.map((period, periodPosition) => (
-            <div
-              className="flex min-h-28 items-center justify-center rounded-lg border bg-muted/30 px-3 py-2 text-sm"
-              key={period.id}
-              style={{ gridColumn: 1, gridRow: periodPosition + 2 }}
-            >
-              <span className="whitespace-nowrap font-semibold text-foreground">
-                {period.startTime} - {period.endTime}
-              </span>
-            </div>
-          ))}
+          {periods.map((period, periodPosition) => {
+            const display = periodTimeDisplay(period);
+
+            return (
+              <div
+                aria-label={display.warning ?? undefined}
+                className={cn(
+                  'flex min-h-28 items-center justify-center rounded-lg border bg-muted/30 px-3 py-2 text-sm',
+                  display.hasMismatch && 'border-amber-400/35 bg-amber-400/5',
+                )}
+                key={period.id}
+                style={{ gridColumn: 1, gridRow: periodPosition + 2 }}
+                title={display.warning ?? undefined}
+              >
+                <PeriodTimeContent display={display} />
+              </div>
+            );
+          })}
           {periods.flatMap((period, periodPosition) =>
             dayNames.map((day, dayIndex) =>
               isCoveredByCard(cards, dayIndex, period.period) ? null : (
