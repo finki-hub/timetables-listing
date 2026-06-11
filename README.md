@@ -2,15 +2,23 @@
 
 A timetable browser for current and historical FCSE class schedules.
 
-## Features
+## Structure
 
-- **Historical timetables** — browse past and present semester schedules
-- **Multiple views** — filter by class group, teacher, or classroom
-- **Static data** — pre-fetched EduPage data avoids CORS issues
+- `api/` - Cloudflare Worker API for fetching and parsing EduPage timetables
+- `web/` - Vite frontend timetable browser
 
-## Development
+## API Development
 
 ```sh
+cd api
+npm install
+npm run dev
+```
+
+## Web Development
+
+```sh
+cd web
 npm install
 npm run dev
 ```
@@ -18,6 +26,7 @@ npm run dev
 ## Build
 
 ```sh
+cd web
 npm run build
 ```
 

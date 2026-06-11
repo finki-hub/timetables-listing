@@ -1,0 +1,30 @@
+{
+  "dependencies": {
+    "@hono/zod-validator": "^0.8.0",
+    "hono": "^4.12.24",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260608.1",
+    "@types/node": "^25.9.2",
+    "eslint": "^10.4.1",
+    "eslint-config-imperium": "^4.0.2",
+    "typescript": "~6.0.3",
+    "vite": "^8.0.16",
+    "vitest": "^4.1.8",
+    "wrangler": "^4.98.0"
+  },
+  "license": "MIT",
+  "name": "timetables-listing-api",
+  "private": true,
+  "scripts": {
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "format": "eslint . --fix",
+    "lint": "eslint . --cache",
+    "test": "vitest run"
+  },
+  "type": "module",
+  "version": "0.0.0"
+}

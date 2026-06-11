@@ -144,3 +144,6 @@ vite.config.ts.timestamp-*
 
 # OMC tooling state
 .omc/
+
+# Cloudflare Wrangler local state
+.wrangler/
