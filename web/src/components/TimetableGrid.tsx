@@ -496,7 +496,7 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
           )}
           {dayLaneLayouts.map((layout) => (
             <div
-              className="group/day relative"
+              className="group/day relative isolate"
               key={layout.dayIndex}
               style={{
                 gridColumn: layout.dayIndex + 2,
