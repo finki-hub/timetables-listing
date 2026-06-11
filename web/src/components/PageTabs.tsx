@@ -14,7 +14,7 @@ type PageTabsProps = {
 
 const pageTabs: PageTab[] = [
   { label: 'Распореди', value: 'timetables' },
-  { label: 'Испитни сесии', value: 'sessions' },
+  { label: 'Сесии', value: 'sessions' },
 ];
 
 const PageTabs = ({ activePage, onChange }: PageTabsProps) => (

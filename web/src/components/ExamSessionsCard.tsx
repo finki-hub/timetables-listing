@@ -118,9 +118,11 @@ const ExamSessionsCard = () => {
             />
           </div>
           <div className="flex flex-col gap-1.5">
-            <CardTitle className="text-lg">Испитни сесии</CardTitle>
+            <CardTitle className="text-lg">
+              Испитни сесии / Колоквиумски недели
+            </CardTitle>
             <CardDescription>
-              Преземи распоред за испитна сесија.
+              Преземи распоред за испитна сесија или колоквиумска недела.
             </CardDescription>
           </div>
         </div>
