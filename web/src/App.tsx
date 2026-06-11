@@ -12,7 +12,6 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { IconLink } from '@/components/ui/icon-controls';
-import { ViewTabs } from '@/components/ViewTabs';
 import { useTimetable } from '@/hooks/use-timetable';
 import { useUrlState } from '@/hooks/use-url-state';
 
@@ -75,28 +74,12 @@ const App = () => {
       </header>
 
       <main className="container mx-auto py-4 sm:py-8">
-        <div className="mb-4 sm:mb-6">
-          <ViewTabs
-            activeView={urlState.view}
-            onChange={(view: ViewMode) => {
-              setUrlState({ entityId: null, query: '', view });
-            }}
-          />
-        </div>
-
-        <ContextBar
-          selectedEntity={timetable.selectedEntity}
-          selectedVersion={timetable.selectedVersion}
-          view={urlState.view}
-          visibleCardCount={timetable.visibleCards.length}
-        />
-
-        <Card className="mt-4 overflow-hidden sm:mt-6">
+        <Card className="overflow-hidden">
           <CardHeader className="bg-muted/30 px-4 sm:px-6">
             <CardTitle className="text-lg">Најди распоред</CardTitle>
             <CardDescription>
-              Изборот се пресликува во URL-то за да може да се сподели
-              конкретниот приказ.
+              Прво избери распоред, а потоа запис од него. Изборот се пресликува
+              во URL-то за да може да се сподели конкретниот приказ.
             </CardDescription>
           </CardHeader>
           <CardContent className="px-4 pb-6 pt-4 sm:px-6">
@@ -111,6 +94,9 @@ const App = () => {
               onVersionChange={(versionId) => {
                 setUrlState({ entityId: null, versionId });
               }}
+              onViewChange={(view: ViewMode) => {
+                setUrlState({ entityId: null, query: '', view });
+              }}
               query={urlState.query}
               selectedEntityId={activeEntityId}
               selectedVersionId={activeVersionId}
@@ -119,6 +105,15 @@ const App = () => {
             />
           </CardContent>
         </Card>
+
+        <div className="mt-4 sm:mt-6">
+          <ContextBar
+            selectedEntity={timetable.selectedEntity}
+            selectedVersion={timetable.selectedVersion}
+            view={urlState.view}
+            visibleCardCount={timetable.visibleCards.length}
+          />
+        </div>
 
         {timetable.error ? (
           <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center sm:mt-6">

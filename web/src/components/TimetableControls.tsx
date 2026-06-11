@@ -1,4 +1,9 @@
-import { BookOpenIcon, EyeOffIcon, SearchIcon, UsersIcon } from 'lucide-react';
+import {
+  BookOpenIcon,
+  LayoutGridIcon,
+  SearchIcon,
+  UsersIcon,
+} from 'lucide-react';
 
 import type { NamedEntity, TimetableListItem, ViewMode } from '@/lib/types';
 
@@ -11,12 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { ViewTabs } from '@/components/ViewTabs';
 
 type TimetableControlsProps = {
   entities: NamedEntity[];
   onEntityChange: (entityId: string) => void;
   onQueryChange: (query: string) => void;
   onVersionChange: (versionId: string) => void;
+  onViewChange: (view: ViewMode) => void;
   query: string;
   selectedEntityId: null | string;
   selectedVersionId: null | string;
@@ -36,6 +43,7 @@ const TimetableControls = ({
   onEntityChange,
   onQueryChange,
   onVersionChange,
+  onViewChange,
   query,
   selectedEntityId,
   selectedVersionId,
@@ -43,7 +51,7 @@ const TimetableControls = ({
   view,
 }: TimetableControlsProps) => (
   <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-    <label className="flex flex-col gap-1.5">
+    <label className="flex flex-col gap-1.5 lg:col-span-2">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <BookOpenIcon
           aria-hidden="true"
@@ -66,22 +74,10 @@ const TimetableControls = ({
                 value={version.id}
               >
                 <span
-                  className="inline-flex min-w-0 items-center gap-2"
+                  className="block truncate"
                   style={{ maxWidth: 'calc(100vw - 5rem)' }}
                 >
-                  <span className="truncate">{version.title}</span>
-                  {version.hidden ? (
-                    <span
-                      aria-label="Hidden timetable"
-                      className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded bg-muted text-muted-foreground"
-                      title="Hidden timetable"
-                    >
-                      <EyeOffIcon
-                        aria-hidden="true"
-                        className="h-3.5 w-3.5"
-                      />
-                    </span>
-                  ) : null}
+                  {version.title}
                 </span>
               </SelectItem>
             ))}
@@ -89,6 +85,20 @@ const TimetableControls = ({
         </SelectContent>
       </Select>
     </label>
+
+    <div className="flex flex-col gap-1.5 lg:col-span-2">
+      <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        <LayoutGridIcon
+          aria-hidden="true"
+          className="h-3.5 w-3.5"
+        />
+        Приказ
+      </span>
+      <ViewTabs
+        activeView={view}
+        onChange={onViewChange}
+      />
+    </div>
 
     <label className="flex flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -114,7 +124,7 @@ const TimetableControls = ({
       </div>
     </label>
 
-    <label className="flex flex-col gap-1.5 lg:col-span-2">
+    <label className="flex flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <UsersIcon
           aria-hidden="true"
