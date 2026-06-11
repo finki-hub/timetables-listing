@@ -39,15 +39,14 @@ app.get('/timetables', async (c) => {
 
   const payload = await fetchTimetableList();
   const timetables = parseTimetableList(payload);
-  const response = c.json(timetables);
 
-  const responseToCache = Response.json(timetables, {
+  const response = Response.json(timetables, {
     headers: {
       'Cache-Control': `public, max-age=${String(TIMETABLE_CACHE_TTL)}`,
     },
   });
 
-  c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache));
+  c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
 
   return response;
 });
@@ -77,15 +76,14 @@ app.get(
     }
 
     const timetable = parseTimetable(payload, id);
-    const response = c.json(timetable);
 
-    const responseToCache = Response.json(timetable, {
+    const response = Response.json(timetable, {
       headers: {
         'Cache-Control': `public, max-age=${String(TIMETABLE_CACHE_TTL)}`,
       },
     });
 
-    c.executionCtx.waitUntil(cache.put(cacheKey, responseToCache));
+    c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
 
     return response;
   },
