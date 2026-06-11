@@ -2,8 +2,11 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import type { ViewMode } from '@/lib/types';
 
+export type AppPage = 'sessions' | 'timetables';
+
 export type UrlState = {
   entityId: null | string;
+  page: AppPage;
   query: string;
   versionId: null | string;
   view: ViewMode;
@@ -27,9 +30,11 @@ const parse = (search: string): UrlState => {
     rawView && viewModes.has(rawView as ViewMode)
       ? (rawView as ViewMode)
       : 'class';
+  const page = params.get('page') === 'sessions' ? 'sessions' : 'timetables';
 
   return {
     entityId: params.get('entity'),
+    page,
     query: params.get('q') ?? '',
     versionId: params.get('version'),
     view,
@@ -62,6 +67,9 @@ const useUrlState = () => {
       const merged = { ...current, ...next };
       const params = new URLSearchParams();
 
+      if (merged.page !== 'timetables') {
+        params.set('page', merged.page);
+      }
       if (merged.versionId) {
         params.set('version', merged.versionId);
       }
