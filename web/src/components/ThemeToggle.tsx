@@ -42,9 +42,15 @@ const ThemeToggle = () => {
       }}
     >
       {theme === 'dark' ? (
-        <SunIcon aria-hidden="true" />
+        <SunIcon
+          aria-hidden="true"
+          className="h-4 w-4"
+        />
       ) : (
-        <MoonIcon aria-hidden="true" />
+        <MoonIcon
+          aria-hidden="true"
+          className="h-4 w-4"
+        />
       )}
     </IconButton>
   );
