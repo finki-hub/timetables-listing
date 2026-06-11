@@ -21,7 +21,7 @@ const viewTabs: ViewTab[] = [
 
 const ViewTabs = ({ activeView, onChange }: ViewTabsProps) => (
   <div
-    className="inline-flex rounded-xl bg-muted p-1"
+    className="inline-flex flex-wrap rounded-xl bg-muted p-1"
     role="tablist"
   >
     {viewTabs.map((tab) => {

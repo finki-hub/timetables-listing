@@ -51,7 +51,7 @@ const TimetableControls = ({
   view,
 }: TimetableControlsProps) => (
   <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
-    <label className="flex flex-col gap-1.5 lg:col-span-2">
+    <label className="flex min-w-0 flex-col gap-1.5 lg:col-span-2">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <BookOpenIcon
           aria-hidden="true"
@@ -86,7 +86,7 @@ const TimetableControls = ({
       </Select>
     </label>
 
-    <div className="flex flex-col gap-1.5 lg:col-span-2">
+    <div className="flex min-w-0 flex-col gap-1.5 lg:col-span-2">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <LayoutGridIcon
           aria-hidden="true"
@@ -100,7 +100,7 @@ const TimetableControls = ({
       />
     </div>
 
-    <label className="flex flex-col gap-1.5">
+    <label className="flex min-w-0 flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <SearchIcon
           aria-hidden="true"
@@ -124,7 +124,7 @@ const TimetableControls = ({
       </div>
     </label>
 
-    <label className="flex flex-col gap-1.5">
+    <label className="flex min-w-0 flex-col gap-1.5">
       <span className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
         <UsersIcon
           aria-hidden="true"

@@ -19,7 +19,7 @@ const pageTabs: PageTab[] = [
 
 const PageTabs = ({ activePage, onChange }: PageTabsProps) => (
   <div
-    className="inline-flex rounded-xl bg-muted p-1"
+    className="inline-flex flex-wrap rounded-xl bg-muted p-1"
     role="tablist"
   >
     {pageTabs.map((tab) => {
