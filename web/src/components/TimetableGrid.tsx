@@ -337,6 +337,9 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
   const [activeDesktopCardId, setActiveDesktopCardId] = useState<null | string>(
     null,
   );
+  const [lastActiveDesktopCardId, setLastActiveDesktopCardId] = useState<
+    null | string
+  >(null);
 
   if (isLoading) {
     return <GridSkeleton />;
@@ -536,6 +539,9 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
                       'absolute min-h-0 transition-[left,width,opacity,filter,box-shadow] duration-200 ease-out',
                       'focus-visible:outline-none',
                       isActive && 'z-20 opacity-100 shadow-xl brightness-100',
+                      !isActive &&
+                        lastActiveDesktopCardId === card.id &&
+                        'z-10',
                       isDimmed && 'opacity-45 brightness-75',
                     )}
                     key={card.id}
@@ -544,9 +550,11 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
                     }}
                     onFocus={() => {
                       setActiveDesktopCardId(card.id);
+                      setLastActiveDesktopCardId(card.id);
                     }}
                     onMouseEnter={() => {
                       setActiveDesktopCardId(card.id);
+                      setLastActiveDesktopCardId(card.id);
                     }}
                     onMouseLeave={() => {
                       setActiveDesktopCardId(null);
