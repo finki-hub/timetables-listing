@@ -229,7 +229,9 @@ export const parseTimetable = (
   const rawLessons = rowsFromTable(tables, 'lessons', rawLessonSchema);
   const rawCards = rowsFromTable(tables, 'cards', rawCardSchema);
 
-  const periodRows = rawPeriods.map(periodFromRaw);
+  const periodRows = rawPeriods
+    .map(periodFromRaw)
+    .toSorted((left, right) => left.period - right.period);
   const periodMap = new Map(periodRows.map((period) => [period.id, period]));
   const periodByNumber = new Map(
     periodRows.map((period) => [period.period, period]),
@@ -288,7 +290,7 @@ export const parseTimetable = (
     classes: namedEntities(rawClasses),
     classrooms: namedEntities(rawClassrooms),
     id: timetableId,
-    periods: periodRows.toSorted((left, right) => left.period - right.period),
+    periods: periodRows,
     subjects: namedEntities(rawSubjects),
     teachers: namedEntities(rawTeachers, (teacher) =>
       namedTeacher(teacher, cleanId(teacher.id)),

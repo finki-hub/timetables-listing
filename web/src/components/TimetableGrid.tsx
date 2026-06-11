@@ -9,10 +9,19 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { dayNames } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 
+type CoverageQuery = {
+  cards: TimetableCard[];
+  dayIndex: number;
+  periodPosition: number;
+  periodPositionByNumber: PeriodPositionByNumber;
+};
+
 type DayLaneLayout = {
   dayIndex: number;
   positionedCards: PositionedCard[];
 };
+
+type PeriodPositionByNumber = Map<number, number>;
 
 type PositionedCard = {
   card: TimetableCard;
@@ -33,6 +42,43 @@ type PeriodTimeDisplay = {
   nameLabel: string;
   timeLabel: string;
   warning: null | string;
+};
+
+const periodPositions = (periods: Period[]): PeriodPositionByNumber =>
+  new Map(periods.map((period, index) => [period.period, index]));
+
+const cardStartPosition = (
+  card: TimetableCard,
+  periodPositionByNumber: PeriodPositionByNumber,
+) => periodPositionByNumber.get(card.periodIndex) ?? null;
+
+const cardEndPosition = (
+  card: TimetableCard,
+  periodPositionByNumber: PeriodPositionByNumber,
+) => {
+  const startPosition = cardStartPosition(card, periodPositionByNumber);
+
+  return startPosition === null ? null : startPosition + card.durationPeriods;
+};
+
+const cardsOverlap = (
+  left: TimetableCard,
+  right: TimetableCard,
+  periodPositionByNumber: PeriodPositionByNumber,
+) => {
+  const leftStart = cardStartPosition(left, periodPositionByNumber);
+  const leftEnd = cardEndPosition(left, periodPositionByNumber);
+  const rightStart = cardStartPosition(right, periodPositionByNumber);
+  const rightEnd = cardEndPosition(right, periodPositionByNumber);
+
+  return (
+    leftStart !== null &&
+    leftEnd !== null &&
+    rightStart !== null &&
+    rightEnd !== null &&
+    leftStart < rightEnd &&
+    rightStart < leftEnd
+  );
 };
 
 const normalizeTime = (time: string): null | string => {
@@ -124,16 +170,17 @@ const PeriodTimeContent = ({ display }: { display: PeriodTimeDisplay }) => {
   );
 };
 
-const cardEndPeriod = (card: TimetableCard) =>
-  card.periodIndex + card.durationPeriods;
-
-const cardsOverlap = (left: TimetableCard, right: TimetableCard) =>
-  left.periodIndex < cardEndPeriod(right) &&
-  right.periodIndex < cardEndPeriod(left);
-
-const firstAvailableLane = (lanes: TimetableCard[][], card: TimetableCard) => {
+const firstAvailableLane = (
+  lanes: TimetableCard[][],
+  card: TimetableCard,
+  periodPositionByNumber: PeriodPositionByNumber,
+) => {
   for (const [index, laneCards] of lanes.entries()) {
-    if (laneCards.every((laneCard) => !cardsOverlap(laneCard, card))) {
+    if (
+      laneCards.every(
+        (laneCard) => !cardsOverlap(laneCard, card, periodPositionByNumber),
+      )
+    ) {
       return index;
     }
   }
@@ -141,19 +188,29 @@ const firstAvailableLane = (lanes: TimetableCard[][], card: TimetableCard) => {
   return lanes.length;
 };
 
-const overlapGroups = (cards: TimetableCard[]) => {
+const overlapGroups = (
+  cards: TimetableCard[],
+  periodPositionByNumber: PeriodPositionByNumber,
+) => {
   const groups: TimetableCard[][] = [];
   let currentGroup: TimetableCard[] = [];
   let currentGroupEnd = -Infinity;
 
   for (const card of cards) {
-    if (currentGroup.length > 0 && card.periodIndex >= currentGroupEnd) {
+    const startPosition = cardStartPosition(card, periodPositionByNumber);
+    const endPosition = cardEndPosition(card, periodPositionByNumber);
+
+    if (startPosition === null || endPosition === null) {
+      continue;
+    }
+
+    if (currentGroup.length > 0 && startPosition >= currentGroupEnd) {
       groups.push(currentGroup);
       currentGroup = [];
     }
 
     currentGroup.push(card);
-    currentGroupEnd = Math.max(currentGroupEnd, cardEndPeriod(card));
+    currentGroupEnd = Math.max(currentGroupEnd, endPosition);
   }
 
   if (currentGroup.length > 0) {
@@ -163,10 +220,13 @@ const overlapGroups = (cards: TimetableCard[]) => {
   return groups;
 };
 
-const positionOverlapGroup = (cards: TimetableCard[]): PositionedCard[] => {
+const positionOverlapGroup = (
+  cards: TimetableCard[],
+  periodPositionByNumber: PeriodPositionByNumber,
+): PositionedCard[] => {
   const lanes: TimetableCard[][] = [];
   const positionedCards = cards.map((card) => {
-    const lane = firstAvailableLane(lanes, card);
+    const lane = firstAvailableLane(lanes, card, periodPositionByNumber);
 
     lanes[lane] = [...(lanes[lane] ?? []), card];
 
@@ -180,40 +240,54 @@ const positionOverlapGroup = (cards: TimetableCard[]): PositionedCard[] => {
   }));
 };
 
-const isCoveredByCard = (
-  cards: TimetableCard[],
-  dayIndex: number,
-  periodIndex: number,
-) =>
-  cards.some(
-    (card) =>
+const isCoveredByCard = ({
+  cards,
+  dayIndex,
+  periodPosition,
+  periodPositionByNumber,
+}: CoverageQuery) =>
+  cards.some((card) => {
+    const startPosition = cardStartPosition(card, periodPositionByNumber);
+    const endPosition = cardEndPosition(card, periodPositionByNumber);
+
+    return (
       card.dayIndex === dayIndex &&
-      card.periodIndex <= periodIndex &&
-      cardEndPeriod(card) > periodIndex,
-  );
+      startPosition !== null &&
+      endPosition !== null &&
+      startPosition <= periodPosition &&
+      endPosition > periodPosition
+    );
+  });
 
 const buildDayLaneLayouts = (
   cards: TimetableCard[],
   periods: Period[],
 ): DayLaneLayout[] => {
-  const validPeriodIndexes = new Set(periods.map((period) => period.period));
+  const periodPositionByNumber = periodPositions(periods);
 
   return dayNames.map((_, dayIndex) => {
     const dayCards = cards
       .filter(
         (card) =>
           card.dayIndex === dayIndex &&
-          validPeriodIndexes.has(card.periodIndex),
+          periodPositionByNumber.has(card.periodIndex),
       )
-      .toSorted(
-        (left, right) =>
-          left.periodIndex - right.periodIndex ||
-          cardEndPeriod(right) - cardEndPeriod(left) ||
-          left.subject.name.localeCompare(right.subject.name, 'mk'),
-      );
-    const positionedCards = overlapGroups(dayCards).flatMap((group) =>
-      positionOverlapGroup(group),
-    );
+      .toSorted((left, right) => {
+        const leftPosition = cardStartPosition(left, periodPositionByNumber);
+        const rightPosition = cardStartPosition(right, periodPositionByNumber);
+        const leftEnd = cardEndPosition(left, periodPositionByNumber);
+        const rightEnd = cardEndPosition(right, periodPositionByNumber);
+
+        return (
+          (leftPosition ?? 0) - (rightPosition ?? 0) ||
+          (rightEnd ?? 0) - (leftEnd ?? 0) ||
+          left.subject.name.localeCompare(right.subject.name, 'mk')
+        );
+      });
+    const positionedCards = overlapGroups(
+      dayCards,
+      periodPositionByNumber,
+    ).flatMap((group) => positionOverlapGroup(group, periodPositionByNumber));
 
     return {
       dayIndex,
@@ -289,6 +363,7 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
   const periodTimeDisplayByNumber = new Map(
     periods.map((period) => [period.period, periodTimeDisplay(period)]),
   );
+  const periodPositionByNumber = periodPositions(periods);
   const gridTemplateRows = `auto repeat(${String(periods.length)}, minmax(7rem, auto))`;
   const activeDesktopCard = activeDesktopCardId
     ? (cards.find((card) => card.id === activeDesktopCardId) ?? null)
@@ -399,7 +474,12 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
           })}
           {periods.flatMap((period, periodPosition) =>
             dayNames.map((day, dayIndex) =>
-              isCoveredByCard(cards, dayIndex, period.period) ? null : (
+              isCoveredByCard({
+                cards,
+                dayIndex,
+                periodPosition,
+                periodPositionByNumber,
+              }) ? null : (
                 <div
                   className="min-h-28 rounded-lg border bg-card/50 transition-colors hover:bg-card"
                   key={`${day}-${period.id}`}
@@ -426,7 +506,7 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
                   activeDesktopCard !== null &&
                   activeDesktopCard.id !== card.id &&
                   activeDesktopCard.dayIndex === card.dayIndex &&
-                  cardsOverlap(activeDesktopCard, card);
+                  cardsOverlap(activeDesktopCard, card, periodPositionByNumber);
                 const laneGapCount = laneCount - 1;
                 const laneWidthUnit =
                   laneCount === 1
@@ -440,6 +520,14 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
                   laneCount === 1 ? '100%' : `calc(${laneWidthUnit})`;
                 const cardLeft = isActive ? 0 : inactiveLeft;
                 const cardWidth = isActive ? '100%' : inactiveWidth;
+                const startPosition = cardStartPosition(
+                  card,
+                  periodPositionByNumber,
+                );
+
+                if (startPosition === null) {
+                  return null;
+                }
 
                 return (
                   <CardBlock
@@ -466,7 +554,7 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
                     style={{
                       height: `calc(((100% - ${String(periods.length - 1)} * ${String(CARD_GAP_REM)}rem) / ${String(periods.length)}) * ${String(card.durationPeriods)} + ${String(card.durationPeriods - 1)} * ${String(CARD_GAP_REM)}rem)`,
                       left: cardLeft,
-                      top: `calc(((100% - ${String(periods.length - 1)} * ${String(CARD_GAP_REM)}rem) / ${String(periods.length)} + ${String(CARD_GAP_REM)}rem) * ${String(card.periodIndex)})`,
+                      top: `calc(((100% - ${String(periods.length - 1)} * ${String(CARD_GAP_REM)}rem) / ${String(periods.length)} + ${String(CARD_GAP_REM)}rem) * ${String(startPosition)})`,
                       width: cardWidth,
                     }}
                     tabIndex={0}
