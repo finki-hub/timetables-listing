@@ -31,10 +31,7 @@ const CardBlock = ({
   style,
   tabIndex,
 }: CardBlockProps) => {
-  const people =
-    card.teachers.length > 0
-      ? card.teachers.map((teacher) => teacher.short)
-      : card.classes.map((entity) => entity.short);
+  const people = card.teachers.map((teacher) => teacher.short);
   const rooms = card.classrooms.map((room) => room.short).join(', ');
   const classroomNames = card.classrooms.map((room) => room.name).join(', ');
   const tooltipLines = [
