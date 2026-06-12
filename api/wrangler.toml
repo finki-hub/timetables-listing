@@ -2,6 +2,7 @@ name = "finki-hub-timetables-api"
 main = "src/index.ts"
 compatibility_date = "2025-02-06"
 compatibility_flags = ["nodejs_compat"]
+workers_dev = false
 
 [observability]
 enabled = true
@@ -15,4 +16,8 @@ enabled = true
 
 [[routes]]
 pattern = "timetables-api.finki-hub.com/*"
+zone_name = "finki-hub.com"
+
+[[routes]]
+pattern = "rasporedi-api.finki-hub.com/*"
 zone_name = "finki-hub.com"
