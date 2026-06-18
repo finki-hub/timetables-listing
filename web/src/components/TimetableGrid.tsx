@@ -21,6 +21,11 @@ type DayLaneLayout = {
   positionedCards: PositionedCard[];
 };
 
+type MobileScheduleProps = {
+  cards: TimetableCard[];
+  periodTimeDisplayByNumber: Map<number, PeriodTimeDisplay>;
+};
+
 type PeriodPositionByNumber = Map<number, number>;
 
 type PositionedCard = {
@@ -36,6 +41,8 @@ type TimetableGridProps = {
 };
 
 const CARD_GAP_REM = 0.5;
+
+const SUBJECT_COLLATOR = new Intl.Collator('mk');
 
 type PeriodTimeDisplay = {
   hasMismatch: boolean;
@@ -92,8 +99,8 @@ const normalizeTime = (time: string): null | string => {
   const numericMinutes = Number(minutes);
 
   if (
-    !Number.isInteger(numericHours) ||
-    !Number.isInteger(numericMinutes) ||
+    !Number.isSafeInteger(numericHours) ||
+    !Number.isSafeInteger(numericMinutes) ||
     numericHours < 0 ||
     numericHours > 23 ||
     numericMinutes < 0 ||
@@ -281,7 +288,7 @@ const buildDayLaneLayouts = (
         return (
           (leftPosition ?? 0) - (rightPosition ?? 0) ||
           (rightEnd ?? 0) - (leftEnd ?? 0) ||
-          left.subject.name.localeCompare(right.subject.name, 'mk')
+          SUBJECT_COLLATOR.compare(left.subject.name, right.subject.name)
         );
       });
     const positionedCards = overlapGroups(
@@ -333,6 +340,71 @@ const GridSkeleton = () => (
   </div>
 );
 
+const MobileSchedule = ({
+  cards,
+  periodTimeDisplayByNumber,
+}: MobileScheduleProps) => (
+  <div className="grid gap-3 lg:hidden">
+    {dayNames.map((day, dayIndex) => {
+      const dayCards = cards.filter((card) => card.dayIndex === dayIndex);
+
+      return (
+        <Card
+          className="overflow-hidden"
+          key={day}
+        >
+          <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-4">
+            <CardTitle className="text-base">{day}</CardTitle>
+            <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+              {dayCards.length}
+            </span>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-3 p-4 pt-3">
+            {dayCards.length > 0 ? (
+              dayCards.map((card) => {
+                const display = periodTimeDisplayByNumber.get(card.periodIndex);
+
+                return (
+                  <div
+                    className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3"
+                    key={card.id}
+                  >
+                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
+                      {display?.hasMismatch ? (
+                        <span
+                          className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm"
+                          title={display.warning ?? undefined}
+                        >
+                          <TriangleAlertIcon
+                            aria-hidden="true"
+                            className="size-3.5 shrink-0 text-amber-400"
+                          />
+                          <span>{display.timeLabel}</span>
+                          <span className="text-muted-foreground/60">|</span>
+                          <span>{display.nameLabel}</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm">
+                          {card.startTime} - {card.endTime}
+                        </span>
+                      )}
+                    </div>
+                    <CardBlock card={card} />
+                  </div>
+                );
+              })
+            ) : (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                Нема термини.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      );
+    })}
+  </div>
+);
+
 const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
   const [activeDesktopCardId, setActiveDesktopCardId] = useState<null | string>(
     null,
@@ -374,69 +446,10 @@ const TimetableGrid = ({ cards, isLoading, periods }: TimetableGridProps) => {
 
   return (
     <>
-      <div className="grid gap-3 lg:hidden">
-        {dayNames.map((day, dayIndex) => {
-          const dayCards = cards.filter((card) => card.dayIndex === dayIndex);
-
-          return (
-            <Card
-              className="overflow-hidden"
-              key={day}
-            >
-              <CardHeader className="flex flex-row items-center justify-between bg-muted/30 p-4">
-                <CardTitle className="text-base">{day}</CardTitle>
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                  {dayCards.length}
-                </span>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 p-4 pt-3">
-                {dayCards.length > 0 ? (
-                  dayCards.map((card) => {
-                    const display = periodTimeDisplayByNumber.get(
-                      card.periodIndex,
-                    );
-
-                    return (
-                      <div
-                        className="flex flex-col gap-2 rounded-lg bg-muted/30 p-3"
-                        key={card.id}
-                      >
-                        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
-                          {display?.hasMismatch ? (
-                            <span
-                              className="inline-flex items-center gap-1.5 rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm"
-                              title={display.warning ?? undefined}
-                            >
-                              <TriangleAlertIcon
-                                aria-hidden="true"
-                                className="size-3.5 shrink-0 text-amber-400"
-                              />
-                              <span>{display.timeLabel}</span>
-                              <span className="text-muted-foreground/60">
-                                |
-                              </span>
-                              <span>{display.nameLabel}</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center rounded-md bg-background px-2 py-0.5 text-xs font-medium shadow-sm">
-                              {card.startTime} - {card.endTime}
-                            </span>
-                          )}
-                        </div>
-                        <CardBlock card={card} />
-                      </div>
-                    );
-                  })
-                ) : (
-                  <p className="py-4 text-center text-sm text-muted-foreground">
-                    Нема термини.
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <MobileSchedule
+        cards={cards}
+        periodTimeDisplayByNumber={periodTimeDisplayByNumber}
+      />
       <div className="hidden overflow-x-auto rounded-xl border bg-card p-3 shadow-sm lg:block">
         <div
           className="grid min-w-[980px] grid-cols-[8rem_repeat(5,minmax(10rem,1fr))] gap-2"

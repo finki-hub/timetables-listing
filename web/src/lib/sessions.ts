@@ -70,20 +70,19 @@ export const groupSessionsByYear = (
     const isYearly = yearPattern.test(year);
     const groupKey = isYearly ? year : OTHER_SESSIONS_GROUP;
 
-    const yearGroup = years.get(groupKey) ?? {
+    const yearGroup = years.getOrInsert(groupKey, {
       sessions: [],
       year: groupKey,
-    };
+    });
     yearGroup.sessions.push({
       fileType: fileName.toLowerCase().endsWith('.pdf') ? 'pdf' : 'xlsx',
       label: isYearly ? name.slice(separatorIndex + 1) : name,
       name,
       url: `${SESSIONS_ASSETS_URL}/sessions/${encodeURIComponent(fileName)}`,
     });
-    years.set(groupKey, yearGroup);
   }
 
-  const grouped = [...years.values()];
+  const grouped = years.values().toArray();
   for (const yearGroup of grouped) {
     yearGroup.sessions.sort(
       (first, second) => sessionRank(first.label) - sessionRank(second.label),

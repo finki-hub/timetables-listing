@@ -41,20 +41,18 @@ const parse = (search: string): UrlState => {
   };
 };
 
-const snapshot = () => globalThis.location.search;
+const snapshot = () => location.search;
 
 const subscribe = (onStoreChange: () => void) => {
-  globalThis.addEventListener('popstate', onStoreChange);
+  addEventListener('popstate', onStoreChange);
   return () => {
-    globalThis.removeEventListener('popstate', onStoreChange);
+    removeEventListener('popstate', onStoreChange);
   };
 };
 
 const buildUrl = (params: URLSearchParams) => {
   const query = params.toString();
-  return query.length > 0
-    ? `${globalThis.location.pathname}?${query}`
-    : globalThis.location.pathname;
+  return query.length > 0 ? `${location.pathname}?${query}` : location.pathname;
 };
 
 const useUrlState = () => {
@@ -63,7 +61,7 @@ const useUrlState = () => {
 
   const update = useCallback(
     (next: Partial<UrlState>, options: UpdateOptions = {}) => {
-      const current = parse(globalThis.location.search);
+      const current = parse(location.search);
       const merged = { ...current, ...next };
       const params = new URLSearchParams();
 
@@ -85,11 +83,11 @@ const useUrlState = () => {
 
       const url = buildUrl(params);
       if (options.replace) {
-        globalThis.history.replaceState(null, '', url);
+        history.replaceState(null, '', url);
       } else {
-        globalThis.history.pushState(null, '', url);
+        history.pushState(null, '', url);
       }
-      globalThis.dispatchEvent(new PopStateEvent('popstate'));
+      dispatchEvent(new PopStateEvent('popstate'));
     },
     [],
   );

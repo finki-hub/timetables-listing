@@ -15,9 +15,7 @@ const getInitialTheme = (): Theme => {
   if (isTheme(stored)) {
     return stored;
   }
-  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches
-    ? 'dark'
-    : 'light';
+  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
 const applyTheme = (theme: Theme) => {
