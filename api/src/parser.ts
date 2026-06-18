@@ -31,6 +31,7 @@ import {
 const DAY_NAMES = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const DAY_COUNT = DAY_NAMES.length;
 const CLEAN_ID_REGEX = /^[* ]+/u;
+const NAME_COLLATOR = new Intl.Collator('mk');
 
 type TimetableTable = {
   data_rows?: Record<string, unknown> | undefined | unknown[];
@@ -120,7 +121,7 @@ const namedEntities = <Row extends RawEntity>(
 ): NamedEntity[] =>
   rows
     .map(mapper)
-    .toSorted((left, right) => left.name.localeCompare(right.name, 'mk'));
+    .toSorted((left, right) => NAME_COLLATOR.compare(left.name, right.name));
 
 const entitiesFromIds = <Row extends RawEntity>(
   ids: undefined | unknown[],
@@ -285,7 +286,7 @@ export const parseTimetable = (
       (left, right) =>
         left.dayIndex - right.dayIndex ||
         left.periodIndex - right.periodIndex ||
-        left.subject.name.localeCompare(right.subject.name, 'mk'),
+        NAME_COLLATOR.compare(left.subject.name, right.subject.name),
     ),
     classes: namedEntities(rawClasses),
     classrooms: namedEntities(rawClassrooms),
