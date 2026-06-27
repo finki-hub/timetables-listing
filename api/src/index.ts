@@ -1,6 +1,9 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 
+import type { Env } from '@/types.js';
+
+import { captureRequest } from '@/analytics.js';
 import { fetchTimetable, fetchTimetableList } from '@/fetch.js';
 import {
   parseTimetable,
@@ -13,7 +16,7 @@ import { validate } from '@/utils.js';
 const CACHE_BASE = 'https://timetables-api.finki-hub.com';
 const TIMETABLE_CACHE_TTL = 3_600; // 1 hour
 
-const app = new Hono()
+const app = new Hono<{ Bindings: Env }>()
   .onError((err, c) => {
     console.error(err);
 
@@ -26,6 +29,23 @@ const app = new Hono()
       origin: '*',
     }),
   )
+  .use('*', async (c, next) => {
+    const start = Date.now();
+
+    // eslint-disable-next-line n/callback-return -- Post-response analytics must run after next() resolves.
+    await next();
+
+    const ms = Date.now() - start;
+
+    c.executionCtx.waitUntil(
+      captureRequest(c.env, {
+        ms,
+        path: new URL(c.req.url).pathname,
+        service: 'timetables-api',
+        status: c.res.status,
+      }),
+    );
+  })
   .get('/timetables', async (c) => {
     const cache = caches.default;
     const cacheKey = `${CACHE_BASE}/timetables`;

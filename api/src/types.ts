@@ -2,6 +2,11 @@ export type ApiError = {
   error: string;
 };
 
+export type Env = {
+  POSTHOG_HOST: string;
+  POSTHOG_KEY: string;
+};
+
 export type Group = {
   classId: string;
   entireClass: boolean;
