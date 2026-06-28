@@ -25,6 +25,7 @@ export const initAnalytics = () => {
     // eslint-disable-next-line camelcase -- PostHog option keys are snake_case.
     person_profiles: 'identified_only',
   });
+  posthog.register({ service: 'timetables-listing' });
 };
 
 export const captureEvent = (
