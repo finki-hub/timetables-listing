@@ -8,7 +8,6 @@ import {
   captureCatalogQuery,
   captureException,
   captureQueryZeroResults,
-  captureRequest,
   captureRequestCompleted,
 } from '@/analytics.js';
 import { fetchTimetable, fetchTimetableList } from '@/fetch.js';
@@ -58,15 +57,6 @@ const app = new Hono<{ Bindings: Env }>()
     const ms = Date.now() - start;
     const path = new URL(c.req.url).pathname;
     const status = caughtError === undefined ? c.res.status : 500;
-
-    c.executionCtx.waitUntil(
-      captureRequest(c.env, {
-        ms,
-        path,
-        service: SERVICE_NAME,
-        status,
-      }),
-    );
 
     c.executionCtx.waitUntil(
       captureRequestCompleted(c.env, {
