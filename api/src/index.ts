@@ -3,7 +3,12 @@ import { cors } from 'hono/cors';
 
 import type { Env } from '@/types.js';
 
-import { captureException, captureRequest } from '@/analytics.js';
+import {
+  captureCatalogQuery,
+  captureException,
+  captureQueryZeroResults,
+  captureRequest,
+} from '@/analytics.js';
 import { fetchTimetable, fetchTimetableList } from '@/fetch.js';
 import {
   parseTimetable,
@@ -14,6 +19,7 @@ import { timetableIdParamSchema } from '@/schemas.js';
 import { validate } from '@/utils.js';
 
 const CACHE_BASE = 'https://timetables-api.finki-hub.com';
+const SERVICE_NAME = 'timetables-api';
 const TIMETABLE_CACHE_TTL = 3_600; // 1 hour
 
 const app = new Hono<{ Bindings: Env }>()
@@ -48,7 +54,7 @@ const app = new Hono<{ Bindings: Env }>()
       captureRequest(c.env, {
         ms,
         path,
-        service: 'timetables-api',
+        service: SERVICE_NAME,
         status: caughtError === undefined ? c.res.status : 500,
       }),
     );
@@ -57,7 +63,7 @@ const app = new Hono<{ Bindings: Env }>()
       c.executionCtx.waitUntil(
         captureException(c.env, {
           path,
-          service: 'timetables-api',
+          service: SERVICE_NAME,
           type:
             caughtError instanceof Error
               ? caughtError.constructor.name
@@ -75,11 +81,37 @@ const app = new Hono<{ Bindings: Env }>()
     const cachedResponse = await cache.match(cacheKey);
 
     if (cachedResponse) {
+      c.executionCtx.waitUntil(
+        captureCatalogQuery(c.env, {
+          cacheHit: true,
+          route: '/timetables',
+          service: SERVICE_NAME,
+        }),
+      );
+
       return new Response(cachedResponse.body, cachedResponse);
     }
 
     const payload = await fetchTimetableList();
     const timetables = parseTimetableList(payload);
+
+    c.executionCtx.waitUntil(
+      captureCatalogQuery(c.env, {
+        cacheHit: false,
+        resultCount: timetables.length,
+        route: '/timetables',
+        service: SERVICE_NAME,
+      }),
+    );
+
+    if (timetables.length === 0) {
+      c.executionCtx.waitUntil(
+        captureQueryZeroResults(c.env, {
+          route: '/timetables',
+          service: SERVICE_NAME,
+        }),
+      );
+    }
 
     const response = Response.json(timetables, {
       headers: {
@@ -101,6 +133,14 @@ const app = new Hono<{ Bindings: Env }>()
       const cachedResponse = await cache.match(cacheKey);
 
       if (cachedResponse) {
+        c.executionCtx.waitUntil(
+          captureCatalogQuery(c.env, {
+            cacheHit: true,
+            route: '/timetables/:id',
+            service: SERVICE_NAME,
+          }),
+        );
+
         return new Response(cachedResponse.body, cachedResponse);
       }
 
@@ -116,6 +156,24 @@ const app = new Hono<{ Bindings: Env }>()
       }
 
       const timetable = parseTimetable(payload, id);
+
+      c.executionCtx.waitUntil(
+        captureCatalogQuery(c.env, {
+          cacheHit: false,
+          resultCount: timetable.cards.length,
+          route: '/timetables/:id',
+          service: SERVICE_NAME,
+        }),
+      );
+
+      if (timetable.cards.length === 0) {
+        c.executionCtx.waitUntil(
+          captureQueryZeroResults(c.env, {
+            route: '/timetables/:id',
+            service: SERVICE_NAME,
+          }),
+        );
+      }
 
       const response = Response.json(timetable, {
         headers: {

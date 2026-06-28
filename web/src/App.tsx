@@ -1,4 +1,6 @@
 import { CalendarClockIcon } from 'lucide-react';
+import { posthog } from 'posthog-js';
+import { useEffect } from 'react';
 import { siGithub } from 'simple-icons';
 
 import type { ViewMode } from '@/lib/types';
@@ -48,6 +50,30 @@ const App = () => {
     ? timetable.selectedEntity.id
     : null;
   const activeVersionId = timetable.selectedVersion?.id ?? null;
+
+  // Debounced catalog_search / search_zero_results — fires 500 ms after the
+  // user stops typing. Guards on non-empty query so filter-only changes and
+  // initial data loads don't produce spurious events.
+  useEffect(() => {
+    const query = urlState.query.trim();
+    const count = timetable.filteredEntities.length;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (query.length > 0) {
+      timer = setTimeout(() => {
+        // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
+        posthog.capture('catalog_search', { query, result_count: count });
+        if (count === 0) {
+          posthog.capture('search_zero_results', { query });
+        }
+      }, 500);
+    }
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [urlState.query, timetable.filteredEntities.length]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,6 +138,14 @@ const App = () => {
                 <TimetableControls
                   entities={timetable.filteredEntities}
                   onEntityChange={(entityId) => {
+                    const position = timetable.filteredEntities.findIndex(
+                      (e) => e.id === entityId,
+                    );
+                    posthog.capture(
+                      'result_clicked',
+                      // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
+                      { position, result_id: entityId },
+                    );
                     setUrlState({ entityId });
                   }}
                   onQueryChange={(query) => {
