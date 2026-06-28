@@ -47,7 +47,7 @@ export const captureRequest = async (
       method: 'POST',
     });
   } catch {
-    // Analytics is best-effort and must never affect the response.
+    //
   }
 };
 
@@ -85,7 +85,7 @@ export const captureCatalogQuery = async (
       method: 'POST',
     });
   } catch {
-    // Analytics is best-effort and must never affect the response.
+    //
   }
 };
 
@@ -111,7 +111,7 @@ export const captureQueryZeroResults = async (
       method: 'POST',
     });
   } catch {
-    // Analytics is best-effort and must never affect the response.
+    //
   }
 };
 
@@ -148,6 +148,6 @@ export const captureException = async (
       method: 'POST',
     });
   } catch {
-    // Analytics is best-effort and must never affect the response.
+    //
   }
 };

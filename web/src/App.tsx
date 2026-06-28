@@ -51,9 +51,6 @@ const App = () => {
     : null;
   const activeVersionId = timetable.selectedVersion?.id ?? null;
 
-  // Debounced catalog_search / search_zero_results — fires 500 ms after the
-  // user stops typing. Guards on non-empty query so filter-only changes and
-  // initial data loads don't produce spurious events.
   useEffect(() => {
     const query = urlState.query.trim();
     const count = timetable.filteredEntities.length;

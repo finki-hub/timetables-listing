@@ -32,8 +32,6 @@ export const initAnalytics = () => {
   });
 };
 
-// No-op in non-PROD so capture calls don't queue events against an
-// uninitialised PostHog instance in dev and preview environments.
 export const captureEvent = (
   event: string,
   properties?: Record<string, unknown>,
