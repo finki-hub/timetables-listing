@@ -1,5 +1,4 @@
 import { CalendarClockIcon } from 'lucide-react';
-import { posthog } from 'posthog-js';
 import { useEffect } from 'react';
 import { siGithub } from 'simple-icons';
 
@@ -21,6 +20,7 @@ import {
 import { IconLink } from '@/components/ui/icon-controls';
 import { useTimetable } from '@/hooks/use-timetable';
 import { useUrlState } from '@/hooks/use-url-state';
+import { captureEvent } from '@/lib/analytics';
 
 const GitHubIcon = () => (
   <svg
@@ -63,9 +63,9 @@ const App = () => {
     if (query.length > 0) {
       timer = setTimeout(() => {
         // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
-        posthog.capture('catalog_search', { query, result_count: count });
+        captureEvent('catalog_search', { query, result_count: count });
         if (count === 0) {
-          posthog.capture('search_zero_results', { query });
+          captureEvent('search_zero_results', { query });
         }
       }, 500);
     }
@@ -141,11 +141,13 @@ const App = () => {
                     const position = timetable.filteredEntities.findIndex(
                       (e) => e.id === entityId,
                     );
-                    posthog.capture(
-                      'result_clicked',
-                      // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
-                      { position, result_id: entityId },
-                    );
+                    if (position !== -1) {
+                      captureEvent(
+                        'result_clicked',
+                        // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
+                        { position, result_id: entityId },
+                      );
+                    }
                     setUrlState({ entityId });
                   }}
                   onQueryChange={(query) => {
