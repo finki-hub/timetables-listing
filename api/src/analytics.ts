@@ -10,6 +10,7 @@ type CatalogQueryProperties = {
 };
 
 type ExceptionProperties = {
+  message: string;
   path: string;
   service: string;
   type: string;
@@ -115,7 +116,7 @@ export const captureException = async (
             {
               mechanism: { handled: false, synthetic: false },
               type: properties.type,
-              value: '(metadata only)',
+              value: properties.message,
             },
           ],
           path: properties.path,

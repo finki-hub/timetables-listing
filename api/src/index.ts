@@ -74,6 +74,10 @@ const app = new Hono<{ Bindings: Env }>()
     if (caughtError !== undefined) {
       c.executionCtx.waitUntil(
         captureException(c.env, {
+          message:
+            caughtError instanceof Error
+              ? caughtError.message
+              : JSON.stringify(caughtError),
           path,
           service: SERVICE_NAME,
           type:
