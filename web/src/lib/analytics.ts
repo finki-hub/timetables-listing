@@ -17,7 +17,7 @@ const posthogHost =
     : DEFAULT_POSTHOG_HOST;
 
 export const initAnalytics = () => {
-  if (posthogKey.length === 0) {
+  if (!import.meta.env.PROD || posthogKey.length === 0) {
     return;
   }
 

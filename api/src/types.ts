@@ -3,8 +3,8 @@ export type ApiError = {
 };
 
 export type Env = {
-  POSTHOG_HOST: string;
-  POSTHOG_KEY: string;
+  POSTHOG_HOST: string | undefined;
+  POSTHOG_KEY: string | undefined;
 };
 
 export type Group = {
