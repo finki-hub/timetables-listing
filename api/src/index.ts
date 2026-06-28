@@ -3,7 +3,7 @@ import { cors } from 'hono/cors';
 
 import type { Env } from '@/types.js';
 
-import { captureRequest } from '@/analytics.js';
+import { captureException, captureRequest } from '@/analytics.js';
 import { fetchTimetable, fetchTimetableList } from '@/fetch.js';
 import {
   parseTimetable,
@@ -32,19 +32,42 @@ const app = new Hono<{ Bindings: Env }>()
   .use('*', async (c, next) => {
     const start = Date.now();
 
-    // eslint-disable-next-line n/callback-return -- Post-response analytics must run after next() resolves.
-    await next();
+    let caughtError: unknown;
+
+    try {
+      // eslint-disable-next-line n/callback-return -- Post-response analytics must run after next() resolves.
+      await next();
+    } catch (error) {
+      caughtError = error;
+    }
 
     const ms = Date.now() - start;
+    const path = new URL(c.req.url).pathname;
 
     c.executionCtx.waitUntil(
       captureRequest(c.env, {
         ms,
-        path: new URL(c.req.url).pathname,
+        path,
         service: 'timetables-api',
-        status: c.res.status,
+        status: caughtError === undefined ? c.res.status : 500,
       }),
     );
+
+    if (caughtError !== undefined) {
+      c.executionCtx.waitUntil(
+        captureException(c.env, {
+          path,
+          service: 'timetables-api',
+          type:
+            caughtError instanceof Error
+              ? caughtError.constructor.name
+              : 'UnknownError',
+        }),
+      );
+
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- re-throwing an unknown caught value.
+      throw caughtError;
+    }
   })
   .get('/timetables', async (c) => {
     const cache = caches.default;

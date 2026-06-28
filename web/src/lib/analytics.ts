@@ -26,6 +26,8 @@ export const initAnalytics = () => {
     api_host: posthogHost,
     autocapture: true,
     // eslint-disable-next-line camelcase -- PostHog option keys are snake_case.
+    capture_exceptions: true,
+    // eslint-disable-next-line camelcase -- PostHog option keys are snake_case.
     person_profiles: 'always',
   });
 };
