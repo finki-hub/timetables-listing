@@ -1,5 +1,7 @@
 import type { Env } from '@/types.js';
 
+const DISTINCT_ID = 'timetables-api-worker';
+
 type CatalogQueryProperties = {
   cacheHit: boolean;
   resultCount?: number;
@@ -20,6 +22,15 @@ type ExceptionProperties = {
   type: string;
 };
 
+type RequestCompletedProperties = {
+  duration_ms: number;
+  method: string;
+  outcome: 'client_error' | 'ok' | 'server_error';
+  route: string;
+  service: string;
+  status: number;
+};
+
 type ZeroResultsProperties = {
   route: string;
   service: string;
@@ -38,7 +49,7 @@ export const captureRequest = async (
       body: JSON.stringify({
         /* eslint-disable camelcase -- PostHog ingestion API requires snake_case keys. */
         api_key: env.POSTHOG_KEY,
-        distinct_id: 'timetables-api-worker',
+        distinct_id: DISTINCT_ID,
         /* eslint-enable camelcase -- Re-enable after the PostHog payload keys. */
         event: 'timetables-api_query',
         properties,
@@ -76,7 +87,7 @@ export const captureCatalogQuery = async (
       body: JSON.stringify({
         /* eslint-disable camelcase -- PostHog ingestion API requires snake_case keys. */
         api_key: env.POSTHOG_KEY,
-        distinct_id: 'timetables-api-worker',
+        distinct_id: DISTINCT_ID,
         /* eslint-enable camelcase -- Re-enable after the PostHog payload keys. */
         event: 'catalog_query',
         properties,
@@ -102,7 +113,7 @@ export const captureQueryZeroResults = async (
       body: JSON.stringify({
         /* eslint-disable camelcase -- PostHog ingestion API requires snake_case keys. */
         api_key: env.POSTHOG_KEY,
-        distinct_id: 'timetables-api-worker',
+        distinct_id: DISTINCT_ID,
         /* eslint-enable camelcase -- Re-enable after the PostHog payload keys. */
         event: 'query_zero_results',
         properties: { route, service },
@@ -128,7 +139,7 @@ export const captureException = async (
       body: JSON.stringify({
         /* eslint-disable camelcase -- PostHog ingestion API requires snake_case keys. */
         api_key: env.POSTHOG_KEY,
-        distinct_id: 'timetables-api-worker',
+        distinct_id: DISTINCT_ID,
         /* eslint-enable camelcase -- Re-enable after the PostHog payload keys. */
         event: '$exception',
         properties: {
@@ -143,6 +154,32 @@ export const captureException = async (
           path: properties.path,
           service: properties.service,
         },
+      }),
+      headers: { 'content-type': 'application/json' },
+      method: 'POST',
+    });
+  } catch {
+    //
+  }
+};
+
+export const captureRequestCompleted = async (
+  env: Env,
+  properties: RequestCompletedProperties,
+): Promise<void> => {
+  if (!env.POSTHOG_KEY || !env.POSTHOG_HOST) {
+    return;
+  }
+
+  try {
+    await fetch(`${env.POSTHOG_HOST}/i/v0/e/`, {
+      body: JSON.stringify({
+        /* eslint-disable camelcase -- PostHog ingestion API requires snake_case keys. */
+        api_key: env.POSTHOG_KEY,
+        distinct_id: DISTINCT_ID,
+        /* eslint-enable camelcase -- Re-enable after the PostHog payload keys. */
+        event: 'request_completed',
+        properties,
       }),
       headers: { 'content-type': 'application/json' },
       method: 'POST',
