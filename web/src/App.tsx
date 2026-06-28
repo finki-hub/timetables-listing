@@ -1,4 +1,5 @@
 import { CalendarClockIcon } from 'lucide-react';
+import { useEffect } from 'react';
 import { siGithub } from 'simple-icons';
 
 import type { ViewMode } from '@/lib/types';
@@ -19,6 +20,7 @@ import {
 import { IconLink } from '@/components/ui/icon-controls';
 import { useTimetable } from '@/hooks/use-timetable';
 import { useUrlState } from '@/hooks/use-url-state';
+import { captureEvent } from '@/lib/analytics';
 
 const GitHubIcon = () => (
   <svg
@@ -48,6 +50,27 @@ const App = () => {
     ? timetable.selectedEntity.id
     : null;
   const activeVersionId = timetable.selectedVersion?.id ?? null;
+
+  useEffect(() => {
+    const query = urlState.query.trim();
+    const count = timetable.filteredEntities.length;
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    if (query.length > 0) {
+      timer = setTimeout(() => {
+        // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
+        captureEvent('catalog_search', { query, result_count: count });
+        if (count === 0) {
+          captureEvent('search_zero_results', { query });
+        }
+      }, 500);
+    }
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [urlState.query, timetable.filteredEntities.length]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -112,6 +135,16 @@ const App = () => {
                 <TimetableControls
                   entities={timetable.filteredEntities}
                   onEntityChange={(entityId) => {
+                    const position = timetable.filteredEntities.findIndex(
+                      (e) => e.id === entityId,
+                    );
+                    if (position !== -1) {
+                      captureEvent(
+                        'result_clicked',
+                        // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
+                        { position, result_id: entityId },
+                      );
+                    }
                     setUrlState({ entityId });
                   }}
                   onQueryChange={(query) => {
