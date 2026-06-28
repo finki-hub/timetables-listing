@@ -1,23 +1,16 @@
 import { posthog } from 'posthog-js';
 
-const DEFAULT_POSTHOG_KEY = 'phc_xXEqLMnYeDPuXA6HHwuasQMdSufDGryS8vZZuHmu9Qwd';
 const DEFAULT_POSTHOG_HOST = 'https://eu.i.posthog.com';
 
-const configuredKey = import.meta.env.VITE_POSTHOG_KEY?.trim();
+const posthogKey = import.meta.env.VITE_POSTHOG_KEY?.trim() ?? '';
 const configuredHost = import.meta.env.VITE_POSTHOG_HOST?.trim();
-
-const posthogKey =
-  configuredKey && configuredKey.length > 0
-    ? configuredKey
-    : DEFAULT_POSTHOG_KEY;
-
 const posthogHost =
   configuredHost && configuredHost.length > 0
     ? configuredHost
     : DEFAULT_POSTHOG_HOST;
 
 export const initAnalytics = () => {
-  if (!import.meta.env.PROD || posthogKey.length === 0) {
+  if (posthogKey.length === 0) {
     return;
   }
 
@@ -38,7 +31,7 @@ export const captureEvent = (
   event: string,
   properties?: Record<string, unknown>,
 ): void => {
-  if (!import.meta.env.PROD) {
+  if (posthogKey.length === 0) {
     return;
   }
   posthog.capture(event, properties);
