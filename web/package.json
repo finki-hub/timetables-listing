@@ -12,7 +12,7 @@
     "lucide-react": "^1.25.0",
     "posthog-js": "^1.405.2",
     "react": "^19.2.6",
-    "react-dom": "^19.2.7",
+    "react-dom": "^19.2.8",
     "simple-icons": "^16.27.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
