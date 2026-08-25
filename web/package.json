@@ -10,7 +10,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.33.0",
-    "posthog-js": "^1.418.6",
+    "posthog-js": "^1.418.10",
     "react": "^19.2.6",
     "react-dom": "^19.2.8",
     "simple-icons": "^16.28.0",
