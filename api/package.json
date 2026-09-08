@@ -1,7 +1,7 @@
 {
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",
-    "hono": "^4.13.5",
+    "hono": "^4.13.7",
     "zod": "^4.5.4"
   },
   "devDependencies": {
