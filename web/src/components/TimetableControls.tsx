@@ -5,7 +5,7 @@ import {
   UsersIcon,
 } from 'lucide-react';
 
-import type { NamedEntity, TimetableListItem, ViewMode } from '@/lib/types';
+import type { ViewMode } from '@/lib/types';
 
 import { Input } from '@/components/ui/input';
 import {
@@ -17,6 +17,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { ViewTabs } from '@/components/ViewTabs';
+
+import type { NamedEntity, TimetableListItem } from '../../../api/src/types';
 
 type TimetableControlsProps = {
   entities: NamedEntity[];

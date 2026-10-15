@@ -6,9 +6,9 @@ import type {
 
 import { MapPinIcon, UserIcon } from 'lucide-react';
 
-import type { TimetableCard } from '@/lib/types';
-
 import { cn } from '@/lib/utils';
+
+import type { TimetableCard } from '../../../api/src/types';
 
 type CardBlockProps = {
   card: TimetableCard;
