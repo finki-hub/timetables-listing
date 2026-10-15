@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 
+import type { ViewMode } from '@/lib/types';
+
+import { fetchTimetable, fetchTimetables } from '@/lib/api';
+
 import type {
   NamedEntity,
   ParsedTimetable,
   TimetableCard,
   TimetableListItem,
-  ViewMode,
-} from '@/lib/types';
-
-import { fetchTimetable, fetchTimetables } from '@/lib/api';
+} from '../../../api/src/types';
 
 type LoadState = {
   error: null | string;
@@ -49,10 +50,7 @@ const entitiesForView = (
   if (view === 'classroom') {
     return timetable.classrooms;
   }
-  if (view === 'subject') {
-    return timetable.subjects;
-  }
-  return timetable.classes;
+  return view === 'subject' ? timetable.subjects : timetable.classes;
 };
 
 const cardsForEntity = (
@@ -69,11 +67,9 @@ const cardsForEntity = (
       return card.teachers.some((entity) => entity.id === entityId);
     }
 
-    if (view === 'subject') {
-      return card.subject.id === entityId;
-    }
-
-    return card.classrooms.some((entity) => entity.id === entityId);
+    return view === 'subject'
+      ? card.subject.id === entityId
+      : card.classrooms.some((entity) => entity.id === entityId);
   });
 
 const defaultTimetable = (timetables: TimetableListItem[]) =>
@@ -133,14 +129,10 @@ const useTimetable = ({
 
   const selectedVersion = useMemo<null | TimetableListItem>(() => {
     const timetables = state.timetables;
-    if (timetables.length === 0) {
-      return null;
-    }
-
-    return (
-      timetables.find((candidate) => candidate.id === versionId) ??
-      defaultTimetable(timetables)
-    );
+    return timetables.length === 0
+      ? null
+      : (timetables.find((candidate) => candidate.id === versionId) ??
+          defaultTimetable(timetables));
   }, [state.timetables, versionId]);
 
   useEffect(() => {
@@ -208,16 +200,17 @@ const useTimetable = ({
     [timetable, view],
   );
   const normalizedQuery = query.trim().toLocaleLowerCase('mk');
-  const filteredEntities = useMemo(() => {
-    if (normalizedQuery.length === 0) {
-      return entities;
-    }
-    return entities.filter(
-      (entity) =>
-        entity.name.toLocaleLowerCase('mk').includes(normalizedQuery) ||
-        entity.short.toLocaleLowerCase('mk').includes(normalizedQuery),
-    );
-  }, [entities, normalizedQuery]);
+  const filteredEntities = useMemo(
+    () =>
+      normalizedQuery.length === 0
+        ? entities
+        : entities.filter(
+            (entity) =>
+              entity.name.toLocaleLowerCase('mk').includes(normalizedQuery) ||
+              entity.short.toLocaleLowerCase('mk').includes(normalizedQuery),
+          ),
+    [entities, normalizedQuery],
+  );
   const selectedEntity =
     entities.find((entity) => entity.id === entityId) ??
     filteredEntities.at(0) ??

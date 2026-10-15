@@ -1,6 +1,10 @@
-import type { ApiError, ParsedTimetable, TimetableListItem } from '@/lib/types';
-
 import { TIMETABLES_API_URL } from '@/lib/constants';
+
+import type {
+  ApiError,
+  ParsedTimetable,
+  TimetableListItem,
+} from '../../../api/src/types';
 
 const trimTrailingSlashes = (url: string) => {
   let normalizedUrl = url;

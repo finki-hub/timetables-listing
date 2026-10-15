@@ -7,9 +7,11 @@ import {
   UsersIcon,
 } from 'lucide-react';
 
-import type { NamedEntity, TimetableListItem, ViewMode } from '@/lib/types';
+import type { ViewMode } from '@/lib/types';
 
 import { cn } from '@/lib/utils';
+
+import type { NamedEntity, TimetableListItem } from '../../../api/src/types';
 
 type ContextBarProps = {
   selectedEntity: NamedEntity | null;

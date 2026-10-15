@@ -1,13 +1,13 @@
 import { CalendarXIcon, TriangleAlertIcon } from 'lucide-react';
 import { useState } from 'react';
 
-import type { Period, TimetableCard } from '@/lib/types';
-
 import { CardBlock } from '@/components/CardBlock';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { dayNames } from '@/lib/constants';
 import { cn } from '@/lib/utils';
+
+import type { Period, TimetableCard } from '../../../api/src/types';
 
 type CoverageQuery = {
   cards: TimetableCard[];
@@ -98,18 +98,17 @@ const normalizeTime = (time: string): null | string => {
   const numericHours = Number(hours);
   const numericMinutes = Number(minutes);
 
-  if (
+  const hasInvalidTime =
     !Number.isSafeInteger(numericHours) ||
     !Number.isSafeInteger(numericMinutes) ||
     numericHours < 0 ||
     numericHours > 23 ||
     numericMinutes < 0 ||
-    numericMinutes > 59
-  ) {
-    return null;
-  }
+    numericMinutes > 59;
 
-  return `${String(numericHours).padStart(2, '0')}:${String(numericMinutes).padStart(2, '0')}`;
+  return hasInvalidTime
+    ? null
+    : `${String(numericHours).padStart(2, '0')}:${String(numericMinutes).padStart(2, '0')}`;
 };
 
 const periodNameRange = (period: Period): [string, string] | null => {
@@ -117,11 +116,7 @@ const periodNameRange = (period: Period): [string, string] | null => {
   const start = parts.at(0);
   const end = parts.at(1);
 
-  if (parts.length !== 2 || !start || !end) {
-    return null;
-  }
-
-  return [start, end];
+  return !start || !end || parts.length !== 2 ? null : [start, end];
 };
 
 const periodTimeDisplay = (period: Period): PeriodTimeDisplay => {
