@@ -23,9 +23,9 @@ const CACHE_BASE = 'https://timetables-api.finki-hub.com';
 const SERVICE_NAME = 'timetables-api';
 
 const toOutcome = (status: number): 'client_error' | 'ok' | 'server_error' => {
-  if (status < 400) return 'ok';
-  if (status < 500) return 'client_error';
-  return 'server_error';
+  const errorOutcome = status >= 500 ? 'server_error' : 'client_error';
+
+  return status < 400 ? 'ok' : errorOutcome;
 };
 const TIMETABLE_CACHE_TTL = 3_600; // 1 hour
 
@@ -71,25 +71,25 @@ const app = new Hono<{ Bindings: Env }>()
       }),
     );
 
-    if (caughtError !== undefined) {
-      c.executionCtx.waitUntil(
-        captureException(c.env, {
-          message:
-            caughtError instanceof Error
-              ? caughtError.message
-              : JSON.stringify(caughtError),
-          path,
-          service: SERVICE_NAME,
-          type:
-            caughtError instanceof Error
-              ? caughtError.constructor.name
-              : 'UnknownError',
-        }),
-      );
+    if (caughtError === undefined) return;
 
-      // eslint-disable-next-line @typescript-eslint/only-throw-error -- re-throwing an unknown caught value.
-      throw caughtError;
-    }
+    c.executionCtx.waitUntil(
+      captureException(c.env, {
+        message:
+          caughtError instanceof Error
+            ? caughtError.message
+            : JSON.stringify(caughtError),
+        path,
+        service: SERVICE_NAME,
+        type:
+          caughtError instanceof Error
+            ? caughtError.constructor.name
+            : 'UnknownError',
+      }),
+    );
+
+    // eslint-disable-next-line @typescript-eslint/only-throw-error -- re-throwing an unknown caught value.
+    throw caughtError;
   })
   .get('/timetables', async (c) => {
     const cache = caches.default;

@@ -40,10 +40,11 @@ type TimetableTable = {
 
 export const cleanId = (value: unknown): string => {
   if (value === null || value === undefined) return '';
-  if (typeof value === 'number') return String(value);
-  if (typeof value !== 'string') return '';
+  if (typeof value === 'string') {
+    return value.replace(CLEAN_ID_REGEX, '').trim();
+  }
 
-  return value.replace(CLEAN_ID_REGEX, '').trim();
+  return typeof value === 'number' ? String(value) : '';
 };
 
 export const decodeDays = (days: unknown): number[] => {
@@ -51,10 +52,16 @@ export const decodeDays = (days: unknown): number[] => {
     typeof days === 'number' || typeof days === 'string' ? String(days) : '';
   const dayFlags = rawDays.trim().padStart(DAY_COUNT, '0');
 
-  return dayFlags
+  const dayIndices: number[] = [];
+
+  for (const [index, flag] of dayFlags
     .slice(0, DAY_COUNT)
     .split('')
-    .flatMap((flag, index) => (flag === '0' ? [] : [index]));
+    .entries()) {
+    if (flag !== '0') dayIndices.push(index);
+  }
+
+  return dayIndices;
 };
 
 const rowsFromTable = <Row>(

@@ -45,7 +45,7 @@ describe('Timetables E2E', () => {
       const payload = await fetchTimetable('28');
       const upstreamError = parseUpstreamError(payload);
 
-      expect(upstreamError).toBe(null);
+      expect(upstreamError).toBeNull();
 
       const timetable = parseTimetable(payload, '28');
 
