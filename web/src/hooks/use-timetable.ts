@@ -217,9 +217,9 @@ const useTimetable = ({
     (normalizedQuery.length > 0 ? null : (entities.at(0) ?? null));
   const visibleCards = useMemo(
     () =>
-      timetable !== null && selectedEntity !== null
-        ? cardsForEntity(timetable.cards, view, selectedEntity.id)
-        : [],
+      timetable === null || selectedEntity === null
+        ? []
+        : cardsForEntity(timetable.cards, view, selectedEntity.id),
     [selectedEntity, timetable, view],
   );
 
