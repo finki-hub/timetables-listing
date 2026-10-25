@@ -116,7 +116,7 @@ const periodNameRange = (period: Period): [string, string] | null => {
   const start = parts.at(0);
   const end = parts.at(1);
 
-  return !start || !end || parts.length !== 2 ? null : [start, end];
+  return start && end && parts.length === 2 ? [start, end] : null;
 };
 
 const periodTimeDisplay = (period: Period): PeriodTimeDisplay => {

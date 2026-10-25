@@ -12,10 +12,6 @@ export type UrlState = {
   view: ViewMode;
 };
 
-type UpdateOptions = {
-  replace?: boolean;
-};
-
 const viewModes = new Set<ViewMode>([
   'class',
   'classroom',
@@ -56,6 +52,10 @@ const buildUrl = (params: URLSearchParams) => {
 };
 
 const useUrlState = () => {
+  type UpdateOptions = {
+    replace?: boolean;
+  };
+
   const search = useSyncExternalStore(subscribe, snapshot, () => '');
   const state = parse(search);
 
