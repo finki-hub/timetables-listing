@@ -8,7 +8,7 @@ export const TIMETABLES_API_URL =
     ? configuredTimetablesApiUrl
     : DEFAULT_TIMETABLES_API_URL;
 
-export const SESSIONS_ASSETS_URL = 'https://assets.finki-hub.com';
+export const SESSIONS_ASSETS_URL = 'https://data.finki-hub.com/legacy';
 
 export const dayNames = [
   'Понеделник',
