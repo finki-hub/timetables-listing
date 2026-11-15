@@ -17,6 +17,8 @@ const config = [
     languageOptions: {
       globals: {
         caches: 'readonly',
+        ExportedHandler: 'readonly',
+        R2Bucket: 'readonly',
       },
     },
     rules: {
