@@ -9,6 +9,10 @@ export type EduPageResponse = {
   text: string;
 };
 
+// How long EduPage gets to answer before the request fails (and a
+// timetable is served from the archive instead).
+const EDUPAGE_TIMEOUT_MS = 10_000;
+
 const requestEduPage = async (
   url: string,
   args: unknown[],
@@ -17,6 +21,7 @@ const requestEduPage = async (
     body: JSON.stringify({ __args: args, __gsh: '00000000' }),
     headers: { 'Content-Type': 'application/json' },
     method: 'POST',
+    signal: AbortSignal.timeout(EDUPAGE_TIMEOUT_MS),
   });
 
   if (!response.ok) {

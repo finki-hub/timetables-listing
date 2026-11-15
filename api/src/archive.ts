@@ -9,7 +9,8 @@ import { timetableListItemSchema } from '@/schemas.js';
 //   timetables/<id>/<sha256>.json  each distinct raw timetable response
 //   timetables/<id>/latest.json    the newest of those
 // Objects are only added or replaced; nothing here deletes. R2 records
-// when each was uploaded.
+// when each was uploaded. A response is stored without the change counter
+// EduPage sometimes appends ("ce"), so the same timetable is stored once.
 
 const LIST_KEY = 'list.json';
 const JSON_METADATA = { contentType: 'application/json' };
@@ -26,6 +27,14 @@ export const sha256 = async (text: string): Promise<string> => {
     .map((byte) => byte.toString(16).padStart(2, '0'))
     .join('');
 };
+
+// EduPage's response without its trailing change counter,
+// `,"ce":{"ttdocs":6085303}}`, which comes and goes between identical
+// responses. Cut from the text, since parsing it again costs CPU time.
+const CHANGE_EVENTS = /,"ce":\{[^{}]*\}\}$/u;
+
+export const withoutChangeEvents = (text: string): string =>
+  text.replace(CHANGE_EVENTS, '}');
 
 const putOnce = async (
   bucket: R2Bucket,
@@ -69,7 +78,9 @@ export const archiveListing = async (
   text: string,
   listed: readonly TimetableListItem[],
 ): Promise<TimetableListItem[]> => {
-  await putOnce(bucket, `list/${await sha256(text)}.json`, text);
+  const stable = withoutChangeEvents(text);
+
+  await putOnce(bucket, `list/${await sha256(stable)}.json`, stable);
 
   const archived = await readListing(bucket);
   const merged = mergeListings(archived, listed);
@@ -117,13 +128,14 @@ export const archiveTimetable = async (
   id: string,
   text: string,
 ): Promise<boolean> => {
-  const hash = await sha256(text);
+  const stable = withoutChangeEvents(text);
+  const hash = await sha256(stable);
   const latest = await bucket.head(latestKey(id));
 
   if (latest?.customMetadata?.sha256 === hash) return false;
 
-  await putOnce(bucket, `timetables/${id}/${hash}.json`, text);
-  await bucket.put(latestKey(id), text, {
+  await putOnce(bucket, `timetables/${id}/${hash}.json`, stable);
+  await bucket.put(latestKey(id), stable, {
     customMetadata: { sha256: hash },
     httpMetadata: JSON_METADATA,
   });

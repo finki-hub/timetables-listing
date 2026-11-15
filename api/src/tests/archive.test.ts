@@ -7,6 +7,7 @@ import {
   mergeListings,
   readListing,
   readTimetable,
+  withoutChangeEvents,
 } from '@/archive.js';
 import { loadTimetable, loadTimetableList, refreshArchive } from '@/sources.js';
 
@@ -220,6 +221,28 @@ describe('Archive', () => {
     await expect(readTimetable(asBucket(bucket), '31')).resolves.toEqual({
       a: 2,
     });
+  });
+
+  it("ignores EduPage's change counter", async () => {
+    const bucket = new MemoryBucket();
+    const plain = '{"r":{"x":1,"changeEvents":{"a":1}},"y":{"b":2}}';
+
+    expect(
+      withoutChangeEvents(`${plain.slice(0, -1)},"ce":{"ttdocs":6}}`),
+    ).toBe(plain);
+    expect(withoutChangeEvents(plain)).toBe(plain);
+
+    await archiveTimetable(asBucket(bucket), '28', plain);
+    await expect(
+      archiveTimetable(
+        asBucket(bucket),
+        '28',
+        `${plain.slice(0, -1)},"ce":{"ttdocs":7}}`,
+      ),
+    ).resolves.toBe(false);
+    expect(
+      bucket.keys().filter((key) => key.startsWith('timetables/28/')),
+    ).toHaveLength(2);
   });
 });
 
