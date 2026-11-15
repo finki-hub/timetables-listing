@@ -3,6 +3,8 @@ export type ApiError = {
 };
 
 export type Env = {
+  // The R2 archive of EduPage's raw responses (archive.ts).
+  ARCHIVE: R2Bucket;
   POSTHOG_HOST: string | undefined;
   POSTHOG_KEY: string | undefined;
 };

@@ -24,7 +24,7 @@ describe('Timetables E2E', () => {
     'should fetch and parse the real timetable listing',
     { timeout: 30_000 },
     async () => {
-      const payload = await fetchTimetableList();
+      const { payload } = await fetchTimetableList();
       const timetables = parseTimetableList(payload);
 
       expect(timetables.length).toBeGreaterThan(0);
@@ -42,7 +42,7 @@ describe('Timetables E2E', () => {
     'should fetch and parse a real timetable',
     { timeout: 30_000 },
     async () => {
-      const payload = await fetchTimetable('28');
+      const { payload } = await fetchTimetable('28');
       const upstreamError = parseUpstreamError(payload);
 
       expect(upstreamError).toBeNull();

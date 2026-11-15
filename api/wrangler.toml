@@ -25,3 +25,11 @@ zone_name = "finki-hub.com"
 [[routes]]
 pattern = "rasporedi-api.finki-hub.com/*"
 zone_name = "finki-hub.com"
+
+# The archive of EduPage's raw responses (src/archive.ts).
+[[r2_buckets]]
+binding = "ARCHIVE"
+bucket_name = "finki-hub-timetables"
+
+[triggers]
+crons = ["23 * * * *"]

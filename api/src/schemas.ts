@@ -25,6 +25,15 @@ export const timetableListingResponseSchema = z.object({
   }),
 });
 
+// A listing entry as the API returns it and the archive keeps it.
+export const timetableListItemSchema = z.object({
+  dateFrom: z.string(),
+  hidden: z.boolean(),
+  id: z.string(),
+  title: z.string(),
+  year: z.number(),
+});
+
 export const upstreamErrorResponseSchema = z.object({
   r: z.object({
     error: z.string(),

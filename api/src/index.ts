@@ -10,13 +10,13 @@ import {
   captureQueryZeroResults,
   captureRequestCompleted,
 } from '@/analytics.js';
-import { fetchTimetable, fetchTimetableList } from '@/fetch.js';
-import {
-  parseTimetable,
-  parseTimetableList,
-  parseUpstreamError,
-} from '@/parser.js';
 import { timetableIdParamSchema } from '@/schemas.js';
+import {
+  loadTimetable,
+  loadTimetableList,
+  refreshArchive,
+  type Source,
+} from '@/sources.js';
 import { validate } from '@/utils.js';
 
 const CACHE_BASE = 'https://timetables-api.finki-hub.com';
@@ -28,6 +28,15 @@ const toOutcome = (status: number): 'client_error' | 'ok' | 'server_error' => {
   return status < 400 ? 'ok' : errorOutcome;
 };
 const TIMETABLE_CACHE_TTL = 3_600; // 1 hour
+// An archived response is cached briefly, so EduPage is tried again soon.
+const ARCHIVE_CACHE_TTL = 300; // 5 minutes
+
+const responseHeaders = (source: Source): Record<string, string> => ({
+  'Cache-Control': `public, max-age=${String(
+    source === 'archive' ? ARCHIVE_CACHE_TTL : TIMETABLE_CACHE_TTL,
+  )}`,
+  'X-Timetables-Source': source,
+});
 
 const app = new Hono<{ Bindings: Env }>()
   .onError((err, c) => {
@@ -108,8 +117,12 @@ const app = new Hono<{ Bindings: Env }>()
       return new Response(cachedResponse.body, cachedResponse);
     }
 
-    const payload = await fetchTimetableList();
-    const timetables = parseTimetableList(payload);
+    const { source, timetables } = await loadTimetableList(
+      c.env.ARCHIVE,
+      (task) => {
+        c.executionCtx.waitUntil(task);
+      },
+    );
 
     c.executionCtx.waitUntil(
       captureCatalogQuery(c.env, {
@@ -130,9 +143,7 @@ const app = new Hono<{ Bindings: Env }>()
     }
 
     const response = Response.json(timetables, {
-      headers: {
-        'Cache-Control': `public, max-age=${String(TIMETABLE_CACHE_TTL)}`,
-      },
+      headers: responseHeaders(source),
     });
 
     c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
@@ -160,18 +171,15 @@ const app = new Hono<{ Bindings: Env }>()
         return new Response(cachedResponse.body, cachedResponse);
       }
 
-      const payload = await fetchTimetable(id);
-      const upstreamError = parseUpstreamError(payload);
+      const result = await loadTimetable(c.env.ARCHIVE, id, (task) => {
+        c.executionCtx.waitUntil(task);
+      });
 
-      if (upstreamError !== null) {
-        const status = upstreamError.toLowerCase().includes('does not exist')
-          ? 404
-          : 502;
-
-        return c.json({ error: upstreamError }, status);
+      if ('error' in result) {
+        return c.json({ error: result.error }, result.status);
       }
 
-      const timetable = parseTimetable(payload, id);
+      const { source, timetable } = result;
 
       c.executionCtx.waitUntil(
         captureCatalogQuery(c.env, {
@@ -192,9 +200,7 @@ const app = new Hono<{ Bindings: Env }>()
       }
 
       const response = Response.json(timetable, {
-        headers: {
-          'Cache-Control': `public, max-age=${String(TIMETABLE_CACHE_TTL)}`,
-        },
+        headers: responseHeaders(source),
       });
 
       c.executionCtx.waitUntil(cache.put(cacheKey, response.clone()));
@@ -203,4 +209,20 @@ const app = new Hono<{ Bindings: Env }>()
     },
   );
 
-export default app;
+const refresh = async (bucket: R2Bucket): Promise<void> => {
+  try {
+    console.log('Archive refreshed', await refreshArchive(bucket));
+  } catch (error) {
+    console.error('Archive refresh failed', error);
+  }
+};
+
+export default {
+  fetch: app.fetch,
+  // Hourly (wrangler.toml): archive the listing, the visible timetables and
+  // a few not archived yet, so old timetables are kept even if no one
+  // requests them before EduPage drops them.
+  scheduled: (_controller, env, context) => {
+    context.waitUntil(refresh(env.ARCHIVE));
+  },
+} satisfies ExportedHandler<Env>;
