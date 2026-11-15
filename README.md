@@ -9,9 +9,9 @@ A timetable browser for current and historical FCSE class schedules.
 
 ## API Archive
 
-The API keeps every raw EduPage response it receives in the
-`finki-hub-timetables` R2 bucket (`ARCHIVE` binding), so timetables survive
-EduPage dropping or failing to serve them:
+The API keeps every raw EduPage response it receives in an R2 bucket (the
+`ARCHIVE` binding), so timetables survive EduPage dropping or failing to serve
+them:
 
 - `list.json` lists every timetable EduPage has listed, and `/timetables`
   returns EduPage's listing merged with it.
