@@ -41,6 +41,25 @@ class MemoryBucket {
     return this.objects.keys().toArray();
   }
 
+  // One page of the delimited listing the refresh reads.
+  list({ delimiter, prefix }: { delimiter: string; prefix: string }) {
+    const prefixes = new Set(
+      this.keys()
+        .filter((key) => key.startsWith(prefix))
+        .map((key) => {
+          const rest = key.slice(prefix.length);
+
+          return `${prefix}${rest.slice(0, rest.indexOf(delimiter) + 1)}`;
+        }),
+    );
+
+    return Promise.resolve({
+      delimitedPrefixes: [...prefixes],
+      objects: [],
+      truncated: false,
+    });
+  }
+
   put(
     key: string,
     text: string,
@@ -132,6 +151,17 @@ const timetablePayload = () => ({
     },
   },
 });
+
+// The same timetable without a card.
+const emptyTimetable = () => {
+  const payload = timetablePayload();
+
+  payload.r.dbiAccessorRes.tables = payload.r.dbiAccessorRes.tables.filter(
+    (entry) => entry.id !== 'cards',
+  );
+
+  return payload;
+};
 
 const respond = (body: unknown): Promise<Response> =>
   Promise.resolve(Response.json(body));
@@ -233,15 +263,53 @@ describe('Sources', () => {
     ).rejects.toThrow('offline');
   });
 
+  it('serves the archived copy in place of an empty timetable', async () => {
+    const bucket = new MemoryBucket();
+    const first = collect();
+
+    stubEduPage(() => respond(timetablePayload()));
+    await loadTimetable(asBucket(bucket), '31', first.defer);
+    await first.settle();
+
+    stubEduPage(() => respond(emptyTimetable()));
+
+    const result = await loadTimetable(asBucket(bucket), '31', () => {});
+
+    expect(result).toMatchObject({ source: 'archive' });
+    expect('timetable' in result && result.timetable.cards).toHaveLength(1);
+  });
+
+  it('answers the upstream error when the archived copy no longer parses', async () => {
+    const bucket = new MemoryBucket();
+
+    await bucket.put('timetables/31/latest.json', '{"r":{}}', {});
+    stubEduPage(() => respond(missing));
+
+    await expect(
+      loadTimetable(asBucket(bucket), '31', () => {}),
+    ).resolves.toEqual({ error: 'Timetable does not exist', status: 404 });
+  });
+
+  it('serves the archived listing in place of an empty one', async () => {
+    const bucket = new MemoryBucket();
+    const first = collect();
+
+    stubEduPage(() => respond(listing(['31', false])));
+    await loadTimetableList(asBucket(bucket), first.defer);
+    await first.settle();
+
+    stubEduPage(() => respond(listing()));
+
+    await expect(
+      loadTimetableList(asBucket(bucket), () => {}),
+    ).resolves.toMatchObject({ source: 'archive', timetables: [{ id: '31' }] });
+  });
+
   it('never archives an empty timetable', async () => {
     const bucket = new MemoryBucket();
-    const empty = timetablePayload();
     const tasks = collect();
 
-    empty.r.dbiAccessorRes.tables = empty.r.dbiAccessorRes.tables.filter(
-      (entry) => entry.id !== 'cards',
-    );
-    stubEduPage(() => respond(empty));
+    stubEduPage(() => respond(emptyTimetable()));
 
     await loadTimetable(asBucket(bucket), '31', tasks.defer);
     await tasks.settle();
@@ -300,14 +368,11 @@ describe('Sources', () => {
       '31',
       '30',
       '29',
-      '28',
-      '27',
     ]);
     await expect(refreshArchive(asBucket(bucket))).resolves.toEqual([
       '31',
-      '26',
-      '25',
-      '24',
+      '28',
+      '27',
     ]);
   });
 });

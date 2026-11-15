@@ -83,10 +83,33 @@ export const archiveListing = async (
   return merged;
 };
 
-export const isTimetableArchived = async (
+const TIMETABLES_PREFIX = 'timetables/';
+
+// The ids of every archived timetable, from one listing of the
+// timetables/<id>/ prefixes (a page holds up to 1,000), so a refresh never
+// probes each timetable on its own.
+export const archivedTimetableIds = async (
   bucket: R2Bucket,
-  id: string,
-): Promise<boolean> => (await bucket.head(latestKey(id))) !== null;
+): Promise<Set<string>> => {
+  const ids = new Set<string>();
+  let cursor: string | undefined;
+
+  do {
+    const page = await bucket.list({
+      delimiter: '/',
+      prefix: TIMETABLES_PREFIX,
+      ...(cursor !== undefined && { cursor }),
+    });
+
+    for (const prefix of page.delimitedPrefixes) {
+      ids.add(prefix.slice(TIMETABLES_PREFIX.length, -1));
+    }
+
+    cursor = page.truncated ? page.cursor : undefined;
+  } while (cursor !== undefined);
+
+  return ids;
+};
 
 // Archives a raw timetable response; false when it matches the latest.
 export const archiveTimetable = async (

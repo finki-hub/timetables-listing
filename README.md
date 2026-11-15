@@ -19,7 +19,7 @@ EduPage dropping or failing to serve them:
   (each distinct one is also kept as `timetables/<id>/<sha256>.json`). When
   EduPage fails or no longer has a timetable, `/timetables/:id` serves it
   from there with `X-Timetables-Source: archive`.
-- An hourly cron refreshes the visible timetables and archives up to four
+- An hourly cron refreshes the visible timetables and archives up to two
   timetables not archived yet, so the whole history is archived without
   anyone requesting it.
 

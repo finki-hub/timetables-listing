@@ -1,9 +1,9 @@
 import type { ParsedTimetable, TimetableListItem } from '@/types.js';
 
 import {
+  archivedTimetableIds,
   archiveListing,
   archiveTimetable,
-  isTimetableArchived,
   mergeListings,
   readListing,
   readTimetable,
@@ -71,9 +71,14 @@ export const loadTimetableList = async (
     return { source: 'archive', timetables: fallback };
   }
 
-  if (listed.length === 0) return { source: 'edupage', timetables: listed };
-
   const archived = await archivedListing(bucket);
+
+  // An empty listing is an EduPage fault, never the end of the archive.
+  if (listed.length === 0) {
+    return archived.length === 0
+      ? { source: 'edupage', timetables: listed }
+      : { source: 'archive', timetables: archived };
+  }
 
   defer(logged(archiveListing(bucket, text, listed)));
 
@@ -101,7 +106,15 @@ const fromArchive = async (
     return null;
   }
 
-  return payload === null ? null : parseTimetable(payload, id);
+  if (payload === null) return null;
+
+  try {
+    return parseTimetable(payload, id);
+  } catch (error) {
+    console.error(`Archived timetable ${id} no longer parses`, error);
+
+    return null;
+  }
 };
 
 export const loadTimetable = async (
@@ -140,17 +153,26 @@ export const loadTimetable = async (
 
   const timetable = parseTimetable(payload, id);
 
-  // An empty timetable is served but never replaces an archived one.
-  if (timetable.cards.length > 0) {
-    defer(logged(archiveTimetable(bucket, id, text)));
+  // An empty timetable never replaces an archived one, and the archived one
+  // is served in its place.
+  if (timetable.cards.length === 0) {
+    const archived = await fromArchive(bucket, id);
+
+    return archived === null
+      ? { source: 'edupage', timetable }
+      : { source: 'archive', timetable: archived };
   }
+
+  defer(logged(archiveTimetable(bucket, id, text)));
 
   return { source: 'edupage', timetable };
 };
 
 // How many timetables not yet archived one scheduled run fetches; the
-// visible (current) ones are refreshed on every run besides.
-export const BACKFILL_PER_RUN = 4;
+// visible (current) ones are refreshed on every run besides. A run stays
+// near 20 subrequests (EduPage and R2 calls), well inside the Workers
+// limit of 50.
+export const BACKFILL_PER_RUN = 2;
 
 // The scheduled refresh: archive the listing, every visible timetable and
 // a few of the timetables not archived yet.
@@ -166,13 +188,11 @@ export const refreshArchive = async (bucket: R2Bucket): Promise<string[]> => {
   if (source === 'archive') return [];
 
   const visible = timetables.filter((item) => !item.hidden);
-  const missing: string[] = [];
-
-  for (const item of timetables) {
-    if (missing.length === BACKFILL_PER_RUN) break;
-    if (!item.hidden) continue;
-    if (!(await isTimetableArchived(bucket, item.id))) missing.push(item.id);
-  }
+  const archived = await archivedTimetableIds(bucket);
+  const missing = timetables
+    .filter((item) => item.hidden && !archived.has(item.id))
+    .slice(0, BACKFILL_PER_RUN)
+    .map((item) => item.id);
 
   const refreshed: string[] = [];
 
