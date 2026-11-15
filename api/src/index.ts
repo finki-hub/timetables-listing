@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { routePath } from 'hono/route';
 
-import type { Env } from '@/types.js';
+import type { Env } from '@/env.js';
 
 import {
   captureCatalogQuery,

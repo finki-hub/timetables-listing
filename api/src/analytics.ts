@@ -1,4 +1,4 @@
-import type { Env } from '@/types.js';
+import type { Env } from '@/env.js';
 
 const DISTINCT_ID = 'timetables-api-worker';
 
