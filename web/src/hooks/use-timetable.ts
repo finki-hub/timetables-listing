@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import type { ViewMode } from '@/lib/types';
 
 import { fetchTimetable, fetchTimetables } from '@/lib/api';
+import { normalizeSearch } from '@/lib/schedule';
 
 import type {
   NamedEntity,
@@ -22,6 +23,7 @@ type LoadState = {
 type UseTimetableParams = {
   entityId: null | string;
   onVersionFallback?: (versionId: string) => void;
+  preferredEntityName?: null | string;
   query: string;
   versionId: null | string;
   view: ViewMode;
@@ -75,17 +77,23 @@ const cardsForEntity = (
 const defaultTimetable = (timetables: TimetableListItem[]) =>
   timetables.find((timetable) => !timetable.hidden) ?? timetables.at(0) ?? null;
 
-const errorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+// fetch rejects with a TypeError only when the request itself fails.
+const loadErrorMessage = (error: unknown) =>
+  error instanceof TypeError
+    ? 'Провери ја интернет конекцијата и обиди се повторно.'
+    : 'Серверот врати неочекуван одговор. Обиди се повторно подоцна.';
 
 const useTimetable = ({
   entityId,
   onVersionFallback,
+  preferredEntityName = null,
   query,
   versionId,
   view,
 }: UseTimetableParams) => {
   const [state, setState] = useState<LoadState>(initialLoadState);
+  const [listAttempt, setListAttempt] = useState(0);
+  const [timetableAttempt, setTimetableAttempt] = useState(0);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -111,7 +119,7 @@ const useTimetable = ({
         if (!controller.signal.aborted) {
           setState((current) => ({
             ...current,
-            error: errorMessage(error, 'Could not load timetable list'),
+            error: loadErrorMessage(error),
             isListLoading: false,
             isTimetableLoading: false,
             timetable: null,
@@ -125,7 +133,7 @@ const useTimetable = ({
     return () => {
       controller.abort();
     };
-  }, []);
+  }, [listAttempt]);
 
   const selectedVersion = useMemo<null | TimetableListItem>(() => {
     const timetables = state.timetables;
@@ -180,7 +188,7 @@ const useTimetable = ({
         if (!controller.signal.aborted) {
           setState((current) => ({
             ...current,
-            error: errorMessage(error, 'Could not load timetable'),
+            error: loadErrorMessage(error),
             isTimetableLoading: false,
             timetable: null,
           }));
@@ -192,29 +200,34 @@ const useTimetable = ({
     return () => {
       controller.abort();
     };
-  }, [selectedVersion]);
+  }, [selectedVersion, timetableAttempt]);
 
   const timetable = state.timetable;
   const entities = useMemo(
     () => entitiesForView(timetable, view),
     [timetable, view],
   );
-  const normalizedQuery = query.trim().toLocaleLowerCase('mk');
+  const normalizedQuery = normalizeSearch(query);
   const filteredEntities = useMemo(
     () =>
       normalizedQuery.length === 0
         ? entities
         : entities.filter(
             (entity) =>
-              entity.name.toLocaleLowerCase('mk').includes(normalizedQuery) ||
-              entity.short.toLocaleLowerCase('mk').includes(normalizedQuery),
+              normalizeSearch(entity.name).includes(normalizedQuery) ||
+              normalizeSearch(entity.short).includes(normalizedQuery),
           ),
     [entities, normalizedQuery],
   );
-  const selectedEntity =
-    entities.find((entity) => entity.id === entityId) ??
-    filteredEntities.at(0) ??
-    (normalizedQuery.length > 0 ? null : (entities.at(0) ?? null));
+  const explicitEntity =
+    entities.find((entity) => entity.id === entityId) ?? null;
+  const preferredEntity =
+    entities.find((entity) => entity.name === preferredEntityName) ?? null;
+  const fallbackEntity =
+    normalizedQuery.length > 0
+      ? (filteredEntities.at(0) ?? null)
+      : (preferredEntity ?? entities.at(0) ?? null);
+  const selectedEntity = explicitEntity ?? fallbackEntity;
   const visibleCards = useMemo(
     () =>
       timetable === null || selectedEntity === null
@@ -223,11 +236,21 @@ const useTimetable = ({
     [selectedEntity, timetable, view],
   );
 
+  const hasTimetables = state.timetables.length > 0;
+  const retry = useCallback(() => {
+    if (hasTimetables) {
+      setTimetableAttempt((attempt) => attempt + 1);
+    } else {
+      setListAttempt((attempt) => attempt + 1);
+    }
+  }, [hasTimetables]);
+
   return {
     entities,
     error: state.error,
     filteredEntities,
     isLoading: state.isListLoading || state.isTimetableLoading,
+    retry,
     selectedEntity,
     selectedVersion,
     timetable,

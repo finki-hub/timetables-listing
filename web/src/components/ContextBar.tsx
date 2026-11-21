@@ -1,112 +1,199 @@
 import {
-  BookOpenIcon,
-  CalendarIcon,
-  ClockIcon,
-  GraduationCapIcon,
-  MapPinIcon,
-  UsersIcon,
+  BookmarkPlusIcon,
+  CalendarPlusIcon,
+  CheckIcon,
+  LinkIcon,
+  PrinterIcon,
+  Trash2Icon,
 } from 'lucide-react';
+import { type ReactNode, useState } from 'react';
 
-import type { ViewMode } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { captureEvent } from '@/lib/analytics';
+import { buildCalendar, type DateRange } from '@/lib/schedule';
 
-import { cn } from '@/lib/utils';
-
-import type { NamedEntity, TimetableListItem } from '../../../api/src/types';
+import type { TimetableCard } from '../../../api/src/types';
 
 type ContextBarProps = {
-  selectedEntity: NamedEntity | null;
-  selectedVersion: null | TimetableListItem;
-  view: ViewMode;
-  visibleCardCount: number;
+  cards: TimetableCard[];
+  onAddAll?: () => void;
+  onClear?: () => void;
+  range: DateRange | null;
+  shareUrl?: string;
+  subtitle: string;
+  title: string;
+  versionId: null | string;
 };
 
-const viewIcons: Record<ViewMode, typeof UsersIcon> = {
-  class: UsersIcon,
-  classroom: MapPinIcon,
-  subject: BookOpenIcon,
-  teacher: GraduationCapIcon,
-};
+const COPIED_MS = 2_000;
+const REVOKE_DELAY_MS = 1_000;
 
-const viewLabels: Record<ViewMode, string> = {
-  class: 'Група',
-  classroom: 'Просторија',
-  subject: 'Предмет',
-  teacher: 'Професор',
+const copyLabels = {
+  copied: 'Копирано',
+  failed: 'Не успеа',
+  idle: 'Сподели',
+} as const;
+
+const ActionButton = ({
+  children,
+  disabled,
+  onClick,
+  title,
+}: {
+  children: ReactNode;
+  disabled?: boolean;
+  onClick: () => void;
+  title?: string;
+}) => (
+  <Button
+    disabled={disabled}
+    onClick={onClick}
+    size="sm"
+    title={title}
+    type="button"
+    variant="outline"
+  >
+    {children}
+  </Button>
+);
+
+const downloadCalendar = (content: string, name: string) => {
+  const url = URL.createObjectURL(
+    new Blob([content], { type: 'text/calendar;charset=utf-8' }),
+  );
+  const link = document.createElement('a');
+
+  link.href = url;
+  link.download = `${name.replaceAll(/[\\/:*?"<>|]/gu, '-')}.ics`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  // Revoking immediately can cancel the download in some browsers.
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, REVOKE_DELAY_MS);
 };
 
 const ContextBar = ({
-  selectedEntity,
-  selectedVersion,
-  view,
-  visibleCardCount,
+  cards,
+  onAddAll,
+  onClear,
+  range,
+  shareUrl,
+  subtitle,
+  title,
+  versionId,
 }: ContextBarProps) => {
-  const EntityIcon = viewIcons[view];
+  const [copyState, setCopyState] = useState<'copied' | 'failed' | 'idle'>(
+    'idle',
+  );
+  const canExport = range !== null && versionId !== null && cards.length > 0;
+  const copyLink = async (url: string) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopyState('copied');
+    } catch {
+      setCopyState('failed');
+    }
+    setTimeout(() => {
+      setCopyState('idle');
+    }, COPIED_MS);
+  };
 
   return (
-    <div
-      className={cn(
-        'flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:gap-6',
-        !selectedEntity && 'opacity-70',
-      )}
-    >
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-          <EntityIcon
-            aria-hidden="true"
-            className="h-5 w-5"
-          />
-        </div>
-        <div>
-          <div className="text-xs font-medium text-muted-foreground">
-            {viewLabels[view]}
-          </div>
-          <div className="text-sm font-semibold text-foreground">
-            {selectedEntity?.name ?? 'Избери запис'}
-          </div>
-        </div>
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="min-w-0">
+        <h2 className="truncate text-xl font-bold">{title}</h2>
+        <p className="text-sm text-muted-foreground">{subtitle}</p>
       </div>
+      <div className="flex flex-wrap gap-2 print:hidden">
+        {onAddAll ? (
+          <ActionButton
+            disabled={cards.length === 0}
+            onClick={onAddAll}
+          >
+            <BookmarkPlusIcon
+              aria-hidden="true"
+              className="size-3.5"
+            />
+            Додај во мој
+          </ActionButton>
+        ) : null}
+        <ActionButton
+          disabled={!canExport}
+          onClick={() => {
+            if (range === null || versionId === null) {
+              return;
+            }
 
-      {selectedEntity ? (
-        <>
-          <div className="hidden h-8 w-px bg-border sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <CalendarIcon
+            downloadCalendar(
+              buildCalendar({
+                cards,
+                name: title,
+                // eslint-disable-next-line unicorn/prefer-temporal -- Temporal is not available in every supported browser.
+                now: new Date(),
+                range,
+                versionId,
+              }),
+              title,
+            );
+            captureEvent('calendar_exported', { count: cards.length });
+          }}
+          title={
+            range === null ? 'Оваа верзија нема датумски опсег' : undefined
+          }
+        >
+          <CalendarPlusIcon
+            aria-hidden="true"
+            className="size-3.5"
+          />
+          Календар
+        </ActionButton>
+        <ActionButton
+          disabled={cards.length === 0}
+          onClick={() => {
+            print();
+          }}
+        >
+          <PrinterIcon
+            aria-hidden="true"
+            className="size-3.5"
+          />
+          Печати
+        </ActionButton>
+        {shareUrl ? (
+          <ActionButton
+            onClick={() => {
+              void copyLink(shareUrl);
+            }}
+          >
+            {copyState === 'copied' ? (
+              <CheckIcon
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="size-3.5"
               />
-            </div>
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">
-                Верзија
-              </div>
-              <div className="text-sm font-semibold text-foreground">
-                {selectedVersion?.title ?? '-'}
-              </div>
-            </div>
-          </div>
-
-          <div className="hidden h-8 w-px bg-border sm:block" />
-
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-              <ClockIcon
+            ) : (
+              <LinkIcon
                 aria-hidden="true"
-                className="h-5 w-5"
+                className="size-3.5"
               />
-            </div>
-            <div>
-              <div className="text-xs font-medium text-muted-foreground">
-                Термини оваа недела
-              </div>
-              <div className="text-sm font-semibold text-foreground">
-                {visibleCardCount}
-              </div>
-            </div>
-          </div>
-        </>
-      ) : null}
+            )}
+            <span aria-live="polite">{copyLabels[copyState]}</span>
+          </ActionButton>
+        ) : null}
+        {onClear ? (
+          <ActionButton
+            disabled={cards.length === 0}
+            onClick={onClear}
+          >
+            <Trash2Icon
+              aria-hidden="true"
+              className="size-3.5"
+            />
+            Исчисти
+          </ActionButton>
+        ) : null}
+      </div>
     </div>
   );
 };

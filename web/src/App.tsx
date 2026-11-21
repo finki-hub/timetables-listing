@@ -1,26 +1,25 @@
-import { CalendarClockIcon } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { siGithub } from 'simple-icons';
 
 import type { ViewMode } from '@/lib/types';
 
-import { ContextBar } from '@/components/ContextBar';
 import { ExamSessionsCard } from '@/components/ExamSessionsCard';
+import { LoadError } from '@/components/LoadError';
 import { PageTabs } from '@/components/PageTabs';
+import { RoomFinder } from '@/components/RoomFinder';
+import { SchedulePage } from '@/components/SchedulePage';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { TimetableControls } from '@/components/TimetableControls';
-import { TimetableGrid } from '@/components/TimetableGrid';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
 import { IconLink } from '@/components/ui/icon-controls';
+import { VersionSelect } from '@/components/VersionSelect';
+import { useMySchedule } from '@/hooks/use-my-schedule';
+import { useNow } from '@/hooks/use-now';
 import { useTimetable } from '@/hooks/use-timetable';
 import { useUrlState } from '@/hooks/use-url-state';
 import { captureEvent } from '@/lib/analytics';
+import { readLastSelection, writeLastSelection } from '@/lib/preferences';
+import { skopjeNow } from '@/lib/schedule';
+
+import type { NamedEntity } from '../../api/src/types';
 
 const GitHubIcon = () => (
   <svg
@@ -36,20 +35,29 @@ const GitHubIcon = () => (
 
 const App = () => {
   const [urlState, setUrlState] = useUrlState();
+  const [lastSelection, setLastSelection] = useState(readLastSelection);
   const timetable = useTimetable({
     entityId: urlState.entityId,
     onVersionFallback: (versionId) => {
       setUrlState({ entityId: null, versionId }, { replace: true });
     },
+    preferredEntityName:
+      lastSelection?.view === urlState.view ? lastSelection.name : null,
     query: urlState.query,
     versionId: urlState.versionId,
     view: urlState.view,
   });
-
-  const activeEntityId = timetable.selectedEntity
-    ? timetable.selectedEntity.id
-    : null;
   const activeVersionId = timetable.selectedVersion?.id ?? null;
+  const mySchedule = useMySchedule(activeVersionId);
+  const now = skopjeNow(useNow());
+
+  useEffect(() => {
+    const saved = readLastSelection();
+
+    if (saved && location.search === '') {
+      setUrlState({ view: saved.view }, { replace: true });
+    }
+  }, [setUrlState]);
 
   useEffect(() => {
     const query = urlState.query.trim();
@@ -72,16 +80,24 @@ const App = () => {
     };
   }, [urlState.query, timetable.filteredEntities.length]);
 
+  const selectEntity = (view: ViewMode, entity: NamedEntity) => {
+    const selection = { name: entity.name, view };
+
+    writeLastSelection(selection);
+    setLastSelection(selection);
+    setUrlState({ entityId: entity.id, page: 'timetables', query: '', view });
+  };
+
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b">
-        <div className="container mx-auto flex min-h-16 items-center gap-3 py-3 sm:h-16 sm:py-0">
+      <header className="border-b print:hidden">
+        <div className="container mx-auto flex h-14 items-center gap-3">
           <img
-            alt="ФИНКИ Хаб"
-            className="h-12 w-12 shrink-0 object-contain"
+            alt=""
+            className="h-9 w-9 shrink-0 object-contain"
             src="/logo.png"
           />
-          <h1 className="min-w-0 flex-1 text-base font-bold leading-tight tracking-tight sm:text-xl">
+          <h1 className="min-w-0 flex-1 truncate text-base font-bold tracking-tight sm:text-lg">
             ФИНКИ Хаб / Распореди
           </h1>
           <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -98,102 +114,64 @@ const App = () => {
         </div>
       </header>
 
-      <main className="container mx-auto py-4 sm:py-8">
-        <div className="mb-4 sm:mb-6">
+      <main className="container mx-auto grid grid-cols-[minmax(0,1fr)] gap-4 py-4 print:p-0">
+        <div className="print:hidden">
           <PageTabs
             activePage={urlState.page}
             onChange={(page) => {
-              setUrlState({ page });
+              setUrlState({ page, query: '' });
             }}
           />
         </div>
 
-        {urlState.page === 'sessions' ? (
-          <ExamSessionsCard />
-        ) : (
-          <>
-            <Card className="overflow-hidden">
-              <CardHeader className="bg-muted/30 px-4 sm:px-6">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <CalendarClockIcon
-                      aria-hidden="true"
-                      className="h-5 w-5"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <CardTitle className="text-lg">Распореди</CardTitle>
-                    <CardDescription>
-                      Прво избери распоред, а потоа запис од него. Изборот се
-                      пресликува во URL-то за да може да се сподели конкретниот
-                      приказ.
-                    </CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="px-4 pb-6 pt-4 sm:px-6">
-                <TimetableControls
-                  entities={timetable.filteredEntities}
-                  onEntityChange={(entityId) => {
-                    const position = timetable.filteredEntities.findIndex(
-                      (e) => e.id === entityId,
-                    );
-                    if (position !== -1) {
-                      captureEvent(
-                        'result_clicked',
-                        // eslint-disable-next-line camelcase -- PostHog property names are snake_case.
-                        { position, result_id: entityId },
-                      );
-                    }
-                    setUrlState({ entityId });
-                  }}
-                  onQueryChange={(query) => {
-                    setUrlState({ entityId: null, query }, { replace: true });
-                  }}
-                  onVersionChange={(versionId) => {
+        <div
+          aria-labelledby={`page-panel-tab-${urlState.page}`}
+          className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4"
+          id="page-panel"
+          role="tabpanel"
+        >
+          {urlState.page === 'sessions' ? <ExamSessionsCard /> : null}
+
+          {urlState.page === 'rooms' ? (
+            <>
+              <div className="rounded-xl border bg-card p-3 shadow-sm">
+                <VersionSelect
+                  onChange={(versionId) => {
                     setUrlState({ entityId: null, versionId });
                   }}
-                  onViewChange={(view: ViewMode) => {
-                    setUrlState({ entityId: null, query: '', view });
-                  }}
-                  query={urlState.query}
-                  selectedEntityId={activeEntityId}
                   selectedVersionId={activeVersionId}
                   versions={timetable.versions}
-                  view={urlState.view}
                 />
-              </CardContent>
-            </Card>
-
-            <div className="mt-4 sm:mt-6">
-              <ContextBar
-                selectedEntity={timetable.selectedEntity}
-                selectedVersion={timetable.selectedVersion}
-                view={urlState.view}
-                visibleCardCount={timetable.visibleCards.length}
-              />
-            </div>
-
-            {timetable.error ? (
-              <div className="mt-4 rounded-xl border border-destructive/30 bg-destructive/5 p-6 text-center sm:mt-6">
-                <h3 className="text-lg font-semibold text-destructive">
-                  Не може да се вчитаат податоците
-                </h3>
-                <p className="mt-1 text-sm text-destructive/80">
-                  {timetable.error}
-                </p>
               </div>
-            ) : null}
+              {timetable.error ? (
+                <LoadError
+                  message={timetable.error}
+                  onRetry={timetable.retry}
+                />
+              ) : (
+                <RoomFinder
+                  isLoading={timetable.isLoading}
+                  now={now}
+                  onOpenRoom={(room) => {
+                    selectEntity('classroom', room);
+                  }}
+                  timetable={timetable.timetable}
+                />
+              )}
+            </>
+          ) : null}
 
-            <section className="mt-4 sm:mt-6">
-              <TimetableGrid
-                cards={timetable.visibleCards}
-                isLoading={timetable.isLoading}
-                periods={timetable.timetable?.periods ?? []}
-              />
-            </section>
-          </>
-        )}
+          {urlState.page === 'timetables' || urlState.page === 'my' ? (
+            <SchedulePage
+              mySchedule={mySchedule}
+              now={now}
+              onSelectEntity={selectEntity}
+              setUrlState={setUrlState}
+              timetable={timetable}
+              urlState={urlState}
+            />
+          ) : null}
+        </div>
       </main>
     </div>
   );

@@ -6,37 +6,62 @@ import { IconButton } from '@/components/ui/icon-controls';
 type Theme = 'dark' | 'light';
 
 const storageKey = 'theme';
+const darkQuery = '(prefers-color-scheme: dark)';
 
 const isTheme = (value: null | string): value is Theme =>
   value === 'dark' || value === 'light';
 
-const getInitialTheme = (): Theme => {
-  const stored = localStorage.getItem(storageKey);
-  if (isTheme(stored)) {
-    return stored;
+const readStoredTheme = (): null | Theme => {
+  try {
+    const stored = localStorage.getItem(storageKey);
+
+    return isTheme(stored) ? stored : null;
+  } catch {
+    return null;
   }
-  return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 };
 
-const applyTheme = (theme: Theme) => {
-  document.documentElement.dataset['kbTheme'] = theme;
-  localStorage.setItem(storageKey, theme);
-};
+const systemTheme = (): Theme =>
+  matchMedia(darkQuery).matches ? 'dark' : 'light';
 
 const ThemeToggle = () => {
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
+  const [theme, setTheme] = useState<Theme>(
+    () => readStoredTheme() ?? systemTheme(),
+  );
 
   useEffect(() => {
-    applyTheme(theme);
+    document.documentElement.dataset['kbTheme'] = theme;
   }, [theme]);
+
+  useEffect(() => {
+    const media = matchMedia(darkQuery);
+    const handleChange = () => {
+      if (readStoredTheme() === null) {
+        setTheme(systemTheme());
+      }
+    };
+
+    media.addEventListener('change', handleChange);
+
+    return () => {
+      media.removeEventListener('change', handleChange);
+    };
+  }, []);
 
   return (
     <IconButton
-      aria-label="Промени тема"
+      aria-label={
+        theme === 'dark' ? 'Префрли на светла тема' : 'Префрли на темна тема'
+      }
       onClick={() => {
-        setTheme((currentTheme) =>
-          currentTheme === 'dark' ? 'light' : 'dark',
-        );
+        const nextTheme = theme === 'dark' ? 'light' : 'dark';
+
+        setTheme(nextTheme);
+        try {
+          localStorage.setItem(storageKey, nextTheme);
+        } catch {
+          // Storage can be unavailable; the theme then lasts for this visit.
+        }
       }}
     >
       {theme === 'dark' ? (

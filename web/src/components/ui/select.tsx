@@ -43,6 +43,19 @@ const SelectContent = ({
   </SelectPrimitive.Portal>
 );
 
+const SelectLabel = ({
+  className,
+  ...props
+}: ComponentPropsWithoutRef<typeof SelectPrimitive.Label>) => (
+  <SelectPrimitive.Label
+    className={cn(
+      'px-2 py-1.5 text-xs font-semibold text-muted-foreground',
+      className,
+    )}
+    {...props}
+  />
+);
+
 const SelectItem = ({
   children,
   className,
@@ -88,6 +101,7 @@ export {
   SelectContent,
   SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 };
