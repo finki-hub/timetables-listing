@@ -101,13 +101,13 @@ describe('canonicalPeriodTimes', () => {
 
   it('preserves the input order and does not mutate it', () => {
     const input = [
-      period([0, '8:00 - 8:45', '07:10', '07:55']),
       period([1, '9:00 - 9:45', '09:00', '09:45']),
+      period([0, '8:00 - 8:45', '07:10', '07:55']),
     ];
 
     const result = canonicalPeriodTimes(input);
 
-    expect(result.map((entry) => entry.period)).toEqual([0, 1]);
-    expect(input[0]?.startTime).toBe('07:10');
+    expect(result.map((entry) => entry.period)).toEqual([1, 0]);
+    expect(input[1]?.startTime).toBe('07:10');
   });
 });
