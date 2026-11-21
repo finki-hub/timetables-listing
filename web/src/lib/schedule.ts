@@ -105,15 +105,19 @@ export const compareCards = (left: TimetableCard, right: TimetableCard) =>
   toMinutes(left.endTime) - toMinutes(right.endTime);
 
 export const normalizeSearch = (value: string) => {
-  const latin = Array.from(
-    value.trim().toLocaleLowerCase('mk'),
-    (character) => latinByCyrillic[character] ?? character,
-  ).join('');
-
-  return latin
+  // Collapse Latin digraphs first, so transliterated Cyrillic pairs such as
+  // "сх" are not mistaken for them.
+  const collapsed = value
+    .trim()
+    .toLocaleLowerCase('mk')
     .replaceAll('zh', 'z')
     .replaceAll('ch', 'c')
     .replaceAll('sh', 's');
+
+  return Array.from(
+    collapsed,
+    (character) => latinByCyrillic[character] ?? character,
+  ).join('');
 };
 
 export const parseVersion = (title: string): VersionInfo => {
@@ -123,15 +127,22 @@ export const parseVersion = (title: string): VersionInfo => {
   let rangeLabel: null | string = null;
 
   if (rangeMatch?.groups) {
-    const { groups } = rangeMatch;
-    const startDay = Number(groups['startDay']);
-    const startMonth = Number(groups['startMonth']);
-    const endDay = Number(groups['endDay']);
-    const endMonth = Number(groups['endMonth']);
-    const endYear = Number(groups['endYear']);
+    const {
+      endDay: endDayText,
+      endMonth: endMonthText,
+      endYear: endYearText,
+      startDay: startDayText,
+      startMonth: startMonthText,
+      startYear: startYearText,
+    } = rangeMatch.groups;
+    const startDay = Number(startDayText);
+    const startMonth = Number(startMonthText);
+    const endDay = Number(endDayText);
+    const endMonth = Number(endMonthText);
+    const endYear = Number(endYearText);
     const inferredYear = startMonth > endMonth ? endYear - 1 : endYear;
-    const resolvedStartYear = groups['startYear']
-      ? Number(groups['startYear'])
+    const resolvedStartYear = startYearText
+      ? Number(startYearText)
       : inferredYear;
 
     range = {
@@ -301,10 +312,10 @@ export const lessonType = (subjectName: string): LessonType | null => {
 
 const escapeIcs = (value: string) =>
   value
-    .replaceAll('\\', '\\\\')
-    .replaceAll(';', '\\;')
-    .replaceAll(',', '\\,')
-    .replaceAll('\n', '\\n');
+    .replaceAll('\\', String.raw`\\`)
+    .replaceAll(';', String.raw`\;`)
+    .replaceAll(',', String.raw`\,`)
+    .replaceAll('\n', String.raw`\n`);
 
 const foldIcsLine = (line: string) => {
   const encoder = new TextEncoder();

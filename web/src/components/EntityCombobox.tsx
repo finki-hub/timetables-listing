@@ -132,6 +132,11 @@ const EntityCombobox = ({
                 onClick={() => {
                   choose(entity.id);
                 }}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    choose(entity.id);
+                  }
+                }}
                 onMouseDown={(event) => {
                   event.preventDefault();
                 }}

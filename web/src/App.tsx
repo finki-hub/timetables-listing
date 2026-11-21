@@ -125,6 +125,7 @@ const App = () => {
         </div>
 
         <div
+          aria-labelledby={`page-panel-tab-${urlState.page}`}
           className="grid min-w-0 grid-cols-[minmax(0,1fr)] gap-4"
           id="page-panel"
           role="tabpanel"

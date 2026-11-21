@@ -19,13 +19,14 @@ type ContextBarProps = {
   onAddAll?: () => void;
   onClear?: () => void;
   range: DateRange | null;
-  shareUrl: string;
+  shareUrl?: string;
   subtitle: string;
   title: string;
   versionId: null | string;
 };
 
 const COPIED_MS = 2_000;
+const REVOKE_DELAY_MS = 1_000;
 
 const copyLabels = {
   copied: 'Копирано',
@@ -64,8 +65,13 @@ const downloadCalendar = (content: string, name: string) => {
 
   link.href = url;
   link.download = `${name.replaceAll(/[\\/:*?"<>|]/gu, '-')}.ics`;
+  document.body.append(link);
   link.click();
-  URL.revokeObjectURL(url);
+  link.remove();
+  // Revoking immediately can cancel the download in some browsers.
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, REVOKE_DELAY_MS);
 };
 
 const ContextBar = ({
@@ -82,9 +88,9 @@ const ContextBar = ({
     'idle',
   );
   const canExport = range !== null && versionId !== null && cards.length > 0;
-  const copyLink = async () => {
+  const copyLink = async (url: string) => {
     try {
-      await navigator.clipboard.writeText(shareUrl);
+      await navigator.clipboard.writeText(url);
       setCopyState('copied');
     } catch {
       setCopyState('failed');
@@ -155,24 +161,26 @@ const ContextBar = ({
           />
           Печати
         </ActionButton>
-        <ActionButton
-          onClick={() => {
-            void copyLink();
-          }}
-        >
-          {copyState === 'copied' ? (
-            <CheckIcon
-              aria-hidden="true"
-              className="size-3.5"
-            />
-          ) : (
-            <LinkIcon
-              aria-hidden="true"
-              className="size-3.5"
-            />
-          )}
-          <span aria-live="polite">{copyLabels[copyState]}</span>
-        </ActionButton>
+        {shareUrl ? (
+          <ActionButton
+            onClick={() => {
+              void copyLink(shareUrl);
+            }}
+          >
+            {copyState === 'copied' ? (
+              <CheckIcon
+                aria-hidden="true"
+                className="size-3.5"
+              />
+            ) : (
+              <LinkIcon
+                aria-hidden="true"
+                className="size-3.5"
+              />
+            )}
+            <span aria-live="polite">{copyLabels[copyState]}</span>
+          </ActionButton>
+        ) : null}
         {onClear ? (
           <ActionButton
             disabled={cards.length === 0}

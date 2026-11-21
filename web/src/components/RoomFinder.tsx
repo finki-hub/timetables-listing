@@ -60,18 +60,27 @@ const RoomFinder = ({
   onOpenRoom,
   timetable,
 }: RoomFinderProps) => {
-  const periods = timetable?.periods ?? [];
-  const currentPeriod = periods.findIndex(
-    (period) => toMinutes(period.endTime) > now.minutes,
-  );
-  const defaultPeriod = Math.max(currentPeriod, 0);
   const [selection, setSelection] = useState<null | {
     day: number;
     from: number;
     to: number;
   }>(null);
-  const day =
-    selection?.day ?? (now.dayIndex < dayNames.length ? now.dayIndex : 0);
+
+  if (isLoading) {
+    return <Skeleton className="h-64 rounded-xl" />;
+  }
+
+  const periods = timetable?.periods ?? [];
+  const currentPeriod = periods.findIndex(
+    (period) => toMinutes(period.endTime) > now.minutes,
+  );
+  const isWorkDay = now.dayIndex < dayNames.length;
+  const hasPeriodLeftToday = isWorkDay && currentPeriod !== -1;
+  const nextWorkDay =
+    isWorkDay && now.dayIndex + 1 < dayNames.length ? now.dayIndex + 1 : 0;
+  const defaultDay = hasPeriodLeftToday ? now.dayIndex : nextWorkDay;
+  const defaultPeriod = hasPeriodLeftToday ? currentPeriod : 0;
+  const day = selection?.day ?? defaultDay;
   const from = Math.min(
     selection?.from ?? defaultPeriod,
     Math.max(periods.length - 1, 0),
@@ -83,8 +92,12 @@ const RoomFinder = ({
   const startPeriod = periods[from];
   const endPeriod = periods[to];
 
-  if (isLoading || !timetable || !startPeriod || !endPeriod) {
-    return <Skeleton className="h-64 rounded-xl" />;
+  if (!timetable || !startPeriod || !endPeriod) {
+    return (
+      <p className="rounded-xl border border-dashed py-10 text-center text-sm text-muted-foreground">
+        Оваа верзија нема дефинирани часови.
+      </p>
+    );
   }
 
   const freeRooms = findFreeRooms({

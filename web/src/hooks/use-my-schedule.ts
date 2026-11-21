@@ -1,17 +1,19 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type StoredSchedule = Record<string, string[]>;
 
 const STORAGE_KEY = 'my-schedule';
 
-const readStored = (): StoredSchedule => {
+// Returns null when storage is unavailable or corrupt, so callers can keep
+// the selection they already hold instead of overwriting it with nothing.
+const readStored = (): null | StoredSchedule => {
   try {
     const parsed = JSON.parse(
       localStorage.getItem(STORAGE_KEY) ?? '{}',
     ) as unknown;
 
     return typeof parsed !== 'object' || parsed === null
-      ? {}
+      ? null
       : Object.fromEntries(
           Object.entries(parsed).filter(
             (entry): entry is [string, string[]] =>
@@ -20,7 +22,7 @@ const readStored = (): StoredSchedule => {
           ),
         );
   } catch {
-    return {};
+    return null;
   }
 };
 
@@ -33,7 +35,33 @@ const writeStored = (schedule: StoredSchedule) => {
 };
 
 const useMySchedule = (versionId: null | string) => {
-  const [stored, setStored] = useState<StoredSchedule>(readStored);
+  const [stored, setStored] = useState<StoredSchedule>(
+    () => readStored() ?? {},
+  );
+  const latestRef = useRef(stored);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== null && event.key !== STORAGE_KEY) {
+        return;
+      }
+
+      const fresh = readStored();
+
+      if (!fresh) {
+        return;
+      }
+
+      latestRef.current = fresh;
+      setStored(fresh);
+    };
+
+    addEventListener('storage', handleStorage);
+
+    return () => {
+      removeEventListener('storage', handleStorage);
+    };
+  }, []);
 
   const update = useCallback(
     (change: (ids: string[]) => string[]) => {
@@ -41,16 +69,16 @@ const useMySchedule = (versionId: null | string) => {
         return;
       }
 
-      setStored((current) => {
-        const next = {
-          ...current,
-          [versionId]: change(current[versionId] ?? []),
-        };
+      // Re-read so a change made in another tab is merged, not overwritten.
+      const current = readStored() ?? latestRef.current;
+      const next = {
+        ...current,
+        [versionId]: change(current[versionId] ?? []),
+      };
 
-        writeStored(next);
-
-        return next;
-      });
+      latestRef.current = next;
+      writeStored(next);
+      setStored(next);
     },
     [versionId],
   );

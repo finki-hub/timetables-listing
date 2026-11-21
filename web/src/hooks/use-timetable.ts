@@ -77,8 +77,11 @@ const cardsForEntity = (
 const defaultTimetable = (timetables: TimetableListItem[]) =>
   timetables.find((timetable) => !timetable.hidden) ?? timetables.at(0) ?? null;
 
-const LOAD_ERROR_MESSAGE =
-  'Провери ја интернет конекцијата и обиди се повторно.';
+// fetch rejects with a TypeError only when the request itself fails.
+const loadErrorMessage = (error: unknown) =>
+  error instanceof TypeError
+    ? 'Провери ја интернет конекцијата и обиди се повторно.'
+    : 'Серверот врати неочекуван одговор. Обиди се повторно подоцна.';
 
 const useTimetable = ({
   entityId,
@@ -112,11 +115,11 @@ const useTimetable = ({
             timetables,
           }));
         }
-      } catch {
+      } catch (error) {
         if (!controller.signal.aborted) {
           setState((current) => ({
             ...current,
-            error: LOAD_ERROR_MESSAGE,
+            error: loadErrorMessage(error),
             isListLoading: false,
             isTimetableLoading: false,
             timetable: null,
@@ -181,11 +184,11 @@ const useTimetable = ({
             timetable: loadedTimetable,
           }));
         }
-      } catch {
+      } catch (error) {
         if (!controller.signal.aborted) {
           setState((current) => ({
             ...current,
-            error: LOAD_ERROR_MESSAGE,
+            error: loadErrorMessage(error),
             isTimetableLoading: false,
             timetable: null,
           }));

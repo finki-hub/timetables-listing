@@ -37,7 +37,7 @@ const countLabel = (count: number) =>
   count === 1 ? '1 термин' : `${String(count)} термини`;
 
 const buildShareUrl = (
-  urlState: UrlState,
+  view: ViewMode,
   versionId: null | string,
   entityId: null | string,
 ) => {
@@ -46,12 +46,8 @@ const buildShareUrl = (
   if (versionId) {
     url.searchParams.set('version', versionId);
   }
-  if (urlState.page === 'my') {
-    url.searchParams.set('page', 'my');
-    return url.href;
-  }
-  if (urlState.view !== 'class') {
-    url.searchParams.set('view', urlState.view);
+  if (view !== 'class') {
+    url.searchParams.set('view', view);
   }
   if (entityId) {
     url.searchParams.set('entity', entityId);
@@ -150,16 +146,13 @@ const scheduleMeta = (
 };
 
 const ConflictNotice = ({ count }: { count: number }) => (
-  <p
-    className="flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm print:hidden"
-    role="status"
-  >
+  <output className="flex items-center gap-2 rounded-xl border border-destructive/40 bg-destructive/5 p-3 text-sm print:hidden">
     <TriangleAlertIcon
       aria-hidden="true"
       className="size-4 shrink-0 text-destructive"
     />
     {count} термини се преклопуваат.
-  </p>
+  </output>
 );
 
 const SchedulePage = ({
@@ -190,6 +183,12 @@ const SchedulePage = ({
         onAddAll: () => {
           mySchedule.addMany(cards.map((card) => card.id));
         },
+        // Saved classes live in this browser, so only entity views are shareable.
+        shareUrl: buildShareUrl(
+          urlState.view,
+          meta.versionId,
+          timetable.selectedEntity?.id ?? null,
+        ),
       };
   const gridMode = isMyPage
     ? {
@@ -230,11 +229,6 @@ const SchedulePage = ({
           cards={cards}
           {...barActions}
           range={meta.range}
-          shareUrl={buildShareUrl(
-            urlState,
-            meta.versionId,
-            timetable.selectedEntity?.id ?? null,
-          )}
           subtitle={`${countLabel(cards.length)} неделно · ${meta.versionText}`}
           title={title}
           versionId={meta.versionId}
@@ -255,6 +249,12 @@ const SchedulePage = ({
       <section
         className="min-w-0"
         id="schedule-panel"
+        {...(isMyPage
+          ? {}
+          : {
+              'aria-labelledby': `schedule-panel-tab-${urlState.view}`,
+              role: 'tabpanel',
+            })}
       >
         {timetable.error ? null : (
           <TimetableGrid

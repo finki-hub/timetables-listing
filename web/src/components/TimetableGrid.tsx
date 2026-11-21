@@ -284,10 +284,9 @@ const MobileSchedule = ({
 
   return (
     <div className="grid gap-3 lg:hidden print:hidden">
-      <div
+      <fieldset
         aria-label="Ден"
-        className="grid grid-cols-5 gap-1 rounded-lg bg-muted p-1"
-        role="group"
+        className="grid min-w-0 grid-cols-5 gap-1 rounded-lg bg-muted p-1"
       >
         {dayNames.map((day, dayIndex) => {
           const count = cards.filter(
@@ -317,7 +316,7 @@ const MobileSchedule = ({
             </button>
           );
         })}
-      </div>
+      </fieldset>
       <h2 className="text-base font-semibold">
         {dayNames[activeDay]}
         {activeDay === todayIndex ? (
@@ -565,6 +564,8 @@ const TimetableGrid = ({
                     style={{
                       height: `calc(((100% - ${String(visiblePeriods.length - 1)} * ${String(CARD_GAP_REM)}rem) / ${String(visiblePeriods.length)}) * ${String(card.durationPeriods)} + ${String(card.durationPeriods - 1)} * ${String(CARD_GAP_REM)}rem)`,
                       left: cardLeft,
+                      // Reveal rows a short card would otherwise clip.
+                      minHeight: isActive ? 'fit-content' : undefined,
                       top: `calc(((100% - ${String(visiblePeriods.length - 1)} * ${String(CARD_GAP_REM)}rem) / ${String(visiblePeriods.length)} + ${String(CARD_GAP_REM)}rem) * ${String(startPosition)})`,
                       width: cardWidth,
                     }}
