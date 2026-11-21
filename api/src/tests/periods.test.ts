@@ -1,8 +1,10 @@
+/* eslint-disable sonarjs/no-duplicate-string -- The case table repeats fixture times for readability. */
+
 import { describe, expect, it } from 'vitest';
 
 import type { Period } from '@/types.js';
 
-import { canonicalPeriodTimes } from '@/parser.js';
+import { canonicalPeriodTimes, parseTimetable } from '@/parser.js';
 
 type PeriodInput = [number, string, string, string];
 
@@ -97,6 +99,38 @@ describe('canonicalPeriodTimes', () => {
     expect(
       result.map(({ endTime, startTime }) => [startTime, endTime]),
     ).toEqual(expected);
+  });
+
+  it('applies the canonical times through parseTimetable', () => {
+    const payload = {
+      r: {
+        regularData: {
+          dbiAccessorRes: {
+            tables: [
+              {
+                // eslint-disable-next-line camelcase -- EduPage payloads use snake_case keys.
+                data_rows: [
+                  {
+                    endtime: '07:55',
+                    id: 'period-0',
+                    name: '8:00 - 8:45',
+                    period: 0,
+                    short: '0',
+                    starttime: '07:10',
+                  },
+                ],
+                id: 'periods',
+              },
+            ],
+          },
+        },
+      },
+    };
+
+    const timetable = parseTimetable(payload, 'fixture');
+
+    expect(timetable.periods[0]?.startTime).toBe('08:00');
+    expect(timetable.periods[0]?.endTime).toBe('08:45');
   });
 
   it('preserves the input order and does not mutate it', () => {
