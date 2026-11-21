@@ -162,6 +162,98 @@ const periodFromRaw = (period: RawPeriod): Period => ({
   startTime: period.starttime,
 });
 
+// How far the computed times may drift from the period name before the
+// upstream times are considered unreliable.
+const MAX_PERIOD_DRIFT_MINUTES = 15;
+
+const parseClockTime = (time: string): null | number => {
+  const parts = time.trim().split(':');
+
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const hours = Number(parts[0]);
+  const minutes = Number(parts[1]);
+
+  const isValid =
+    Number.isSafeInteger(hours) &&
+    Number.isSafeInteger(minutes) &&
+    hours >= 0 &&
+    hours <= 23 &&
+    minutes >= 0 &&
+    minutes <= 59;
+
+  return isValid ? hours * 60 + minutes : null;
+};
+
+const formatMinutes = (total: number): string =>
+  `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+
+const periodNameRange = (
+  name: string,
+): null | { end: number; start: number } => {
+  const parts = name.split('-').map((part) => part.trim());
+
+  if (parts.length !== 2) {
+    return null;
+  }
+
+  const start = parseClockTime(parts[0] ?? '');
+  const end = parseClockTime(parts[1] ?? '');
+
+  return start === null || end === null ? null : { end, start };
+};
+
+// EduPage sometimes returns period times that disagree with the timetable's
+// period names: small drifts (the first period starting at 08:10 instead of
+// 08:00) and corrupt ranges (evening periods shifted by more than an hour).
+// Prefer the computed times while they are valid, monotonic and close to the
+// names; otherwise fall back to the named ranges.
+export const canonicalPeriodTimes = (periods: Period[]): Period[] => {
+  const ordered = periods.toSorted((left, right) => left.period - right.period);
+
+  const timesAreTrustworthy = ordered.every((period, index) => {
+    const start = parseClockTime(period.startTime);
+    const end = parseClockTime(period.endTime);
+
+    if (start === null || end === null || start >= end) {
+      return false;
+    }
+
+    const range = periodNameRange(period.name);
+
+    if (
+      range !== null &&
+      (Math.abs(range.start - start) > MAX_PERIOD_DRIFT_MINUTES ||
+        Math.abs(range.end - end) > MAX_PERIOD_DRIFT_MINUTES)
+    ) {
+      return false;
+    }
+
+    const previousEnd =
+      index === 0 ? null : parseClockTime(ordered[index - 1]?.endTime ?? '');
+
+    return previousEnd === null || start >= previousEnd;
+  });
+
+  if (timesAreTrustworthy) {
+    return periods;
+  }
+
+  return periods.map((period) => {
+    const range = periodNameRange(period.name);
+
+    return range === null
+      ? period
+      : {
+          ...period,
+          endTime: formatMinutes(range.end),
+          startTime: formatMinutes(range.start),
+        };
+  });
+};
+
 const groupFromRaw = (
   group: RawGroup | undefined,
   fallbackId: string,
@@ -237,9 +329,11 @@ export const parseTimetable = (
   const rawLessons = rowsFromTable(tables, 'lessons', rawLessonSchema);
   const rawCards = rowsFromTable(tables, 'cards', rawCardSchema);
 
-  const periodRows = rawPeriods
-    .map(periodFromRaw)
-    .toSorted((left, right) => left.period - right.period);
+  const periodRows = canonicalPeriodTimes(
+    rawPeriods
+      .map(periodFromRaw)
+      .toSorted((left, right) => left.period - right.period),
+  );
   const periodMap = new Map(periodRows.map((period) => [period.id, period]));
   const periodByNumber = new Map(
     periodRows.map((period) => [period.period, period]),
