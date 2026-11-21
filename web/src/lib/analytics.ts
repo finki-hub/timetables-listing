@@ -13,7 +13,14 @@ const posthogHost =
     ? configuredHost
     : DEFAULT_POSTHOG_HOST;
 
-const pendingEvents: Array<[string, Record<string, unknown> | undefined]> = [];
+type PendingEvent = {
+  event: string;
+  properties: Record<string, unknown> | undefined;
+  // Sent explicitly, so queued events keep the time they happened.
+  timestamp?: Date;
+};
+
+const pendingEvents: PendingEvent[] = [];
 const sdk: { client: null | PostHog; loading: null | Promise<void> } = {
   client: null,
   loading: null,
@@ -21,11 +28,10 @@ const sdk: { client: null | PostHog; loading: null | Promise<void> } = {
 
 const captureSafely = (
   client: PostHog,
-  event: string,
-  properties?: Record<string, unknown>,
+  { event, properties, timestamp }: PendingEvent,
 ) => {
   try {
-    client.capture(event, properties);
+    client.capture(event, properties, timestamp ? { timestamp } : undefined);
   } catch {
     // Telemetry is best-effort and must never affect app behavior.
   }
@@ -49,8 +55,8 @@ const loadPostHog = async () => {
     posthog.register({ service: 'timetables-listing' });
     sdk.client = posthog;
 
-    for (const [event, properties] of pendingEvents.splice(0)) {
-      captureSafely(posthog, event, properties);
+    for (const pending of pendingEvents.splice(0)) {
+      captureSafely(posthog, pending);
     }
   } catch {
     // A blocked or failed chunk only disables telemetry.
@@ -75,8 +81,9 @@ export const captureEvent = (
   }
 
   if (sdk.client) {
-    captureSafely(sdk.client, event, properties);
+    captureSafely(sdk.client, { event, properties });
   } else if (pendingEvents.length < MAX_PENDING_EVENTS) {
-    pendingEvents.push([event, properties]);
+    // eslint-disable-next-line unicorn/prefer-temporal -- PostHog requires a Date timestamp.
+    pendingEvents.push({ event, properties, timestamp: new Date() });
   }
 };
