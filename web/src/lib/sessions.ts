@@ -14,6 +14,8 @@ export type ExamSessionYear = {
 
 export const OTHER_SESSIONS_GROUP = 'Останато';
 
+const yearCollator = new Intl.Collator('en');
+
 const yearPattern = /^\d{4}\/\d{4}$/u;
 
 const sessionOrder = [
@@ -82,7 +84,10 @@ export const groupSessionsByYear = (
     });
   }
 
-  const grouped = years.values().toArray();
+  const grouped = years
+    .values()
+    .toArray()
+    .toSorted((first, second) => yearCollator.compare(second.year, first.year));
   for (const yearGroup of grouped) {
     yearGroup.sessions.sort(
       (first, second) => sessionRank(first.label) - sessionRank(second.label),

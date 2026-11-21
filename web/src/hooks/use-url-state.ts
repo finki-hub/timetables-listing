@@ -2,7 +2,7 @@ import { useCallback, useSyncExternalStore } from 'react';
 
 import type { ViewMode } from '@/lib/types';
 
-export type AppPage = 'sessions' | 'timetables';
+export type AppPage = 'my' | 'rooms' | 'sessions' | 'timetables';
 
 export type UrlState = {
   entityId: null | string;
@@ -19,6 +19,8 @@ const viewModes = new Set<ViewMode>([
   'teacher',
 ]);
 
+const appPages = new Set<AppPage>(['my', 'rooms', 'sessions', 'timetables']);
+
 const parse = (search: string): UrlState => {
   const params = new URLSearchParams(search);
   const rawView = params.get('view');
@@ -26,7 +28,11 @@ const parse = (search: string): UrlState => {
     rawView && viewModes.has(rawView as ViewMode)
       ? (rawView as ViewMode)
       : 'class';
-  const page = params.get('page') === 'sessions' ? 'sessions' : 'timetables';
+  const rawPage = params.get('page');
+  const page =
+    rawPage && appPages.has(rawPage as AppPage)
+      ? (rawPage as AppPage)
+      : 'timetables';
 
   return {
     entityId: params.get('entity'),
@@ -78,7 +84,7 @@ const useUrlState = () => {
         params.set('entity', merged.entityId);
       }
       if (merged.query.trim()) {
-        params.set('q', merged.query.trim());
+        params.set('q', merged.query);
       }
 
       const url = buildUrl(params);
