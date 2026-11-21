@@ -51,23 +51,57 @@ describe('canonicalPeriodTimes', () => {
   it('falls back to the names when the computed times are not monotonic', () => {
     const result = canonicalPeriodTimes([
       period({
-        endTime: '20:45',
-        name: '17:30 - 18:15',
+        endTime: '09:45',
+        name: '09:00 - 09:45',
         period: 12,
-        startTime: '20:00',
+        startTime: '09:00',
       }),
       period({
-        endTime: '20:45',
-        name: '18:20 - 19:05',
+        endTime: '10:15',
+        name: '09:45 - 10:30',
         period: 13,
-        startTime: '20:00',
+        startTime: '09:30',
       }),
     ]);
 
-    expect(result[0]?.startTime).toBe('17:30');
-    expect(result[0]?.endTime).toBe('18:15');
-    expect(result[1]?.startTime).toBe('18:20');
-    expect(result[1]?.endTime).toBe('19:05');
+    expect(result[0]?.startTime).toBe('09:00');
+    expect(result[0]?.endTime).toBe('09:45');
+    expect(result[1]?.startTime).toBe('09:45');
+    expect(result[1]?.endTime).toBe('10:30');
+  });
+
+  it('uses the names for the whole timetable when one period is unreliable', () => {
+    const result = canonicalPeriodTimes([
+      period({
+        endTime: '07:55',
+        name: '8:00 - 8:45',
+        period: 0,
+        startTime: '07:10',
+      }),
+      period({
+        endTime: '09:50',
+        name: '9:00 - 9:45',
+        period: 1,
+        startTime: '09:05',
+      }),
+    ]);
+
+    expect(result[0]?.startTime).toBe('08:00');
+    expect(result[1]?.startTime).toBe('09:00');
+  });
+
+  it('accepts an en dash in the period name', () => {
+    const result = canonicalPeriodTimes([
+      period({
+        endTime: '07:55',
+        name: '8:00 \u{2013} 8:45',
+        period: 0,
+        startTime: '07:10',
+      }),
+    ]);
+
+    expect(result[0]?.startTime).toBe('08:00');
+    expect(result[0]?.endTime).toBe('08:45');
   });
 
   it('keeps the computed times when the name is not a range', () => {
@@ -78,7 +112,12 @@ describe('canonicalPeriodTimes', () => {
         period: 0,
         startTime: '12:00',
       }),
-      period({ period: 1 }),
+      period({
+        endTime: '13:45',
+        name: '13:00 - 13:45',
+        period: 1,
+        startTime: '13:00',
+      }),
     ]);
 
     expect(result[0]?.startTime).toBe('12:00');

@@ -193,7 +193,10 @@ const formatMinutes = (total: number): string =>
 const periodNameRange = (
   name: string,
 ): null | { end: number; start: number } => {
-  const parts = name.split('-').map((part) => part.trim());
+  const parts = name
+    .replaceAll('\u{2013}', '-')
+    .split('-')
+    .map((part) => part.trim());
 
   if (parts.length !== 2) {
     return null;
@@ -237,6 +240,8 @@ export const canonicalPeriodTimes = (periods: Period[]): Period[] => {
     return previousEnd === null || start >= previousEnd;
   });
 
+  // The choice is made for the whole timetable so the schedule stays coherent:
+  // one unreliable period switches every period to its named range.
   if (timesAreTrustworthy) {
     return periods;
   }
